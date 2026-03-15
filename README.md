@@ -259,9 +259,9 @@ A native mobile app would require Play Store approval delays. A PWA gives mobile
 
 | Member | Role |
 |---|---|
-| Member 1 | Frontend (React/Next.js) + UI/UX |
-| Member 2 | Backend (FastAPI) + ML Models |
-| Member 3 | Node.js Triggers + DevOps + Integrations |
+| JEFFERY | Frontend (React/Next.js) + UI/UX |
+| RETHICK CB | Backend (FastAPI) + ML Models |
+| ANUMITHA | Node.js Triggers + DevOps + Integrations |
 
 ---
 

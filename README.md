@@ -225,40 +225,7 @@ A native mobile app would require Play Store approval delays. A PWA gives mobile
 
 ### Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    GigShield Platform                    │
-│                                                         │
-│  ┌──────────────┐    ┌──────────────┐                  │
-│  │  Rider PWA   │    │ Insurer Web  │                  │
-│  │ (Next.js)    │    │  Dashboard   │                  │
-│  └──────┬───────┘    └──────┬───────┘                  │
-│         │                   │                           │
-│  ┌──────▼───────────────────▼───────┐                  │
-│  │         FastAPI Backend           │                  │
-│  │  • Onboarding & Profile API       │                  │
-│  │  • Policy & Premium API (ML)      │                  │
-│  │  • Claims Processing API          │                  │
-│  │  • Fraud Detection Engine         │                  │
-│  └──────┬──────────────┬────────────┘                  │
-│         │              │                                │
-│  ┌──────▼──────┐ ┌─────▼──────────┐                   │
-│  │ PostgreSQL  │ │  Node.js        │                   │
-│  │ (Policies,  │ │  Trigger        │                   │
-│  │  Claims)    │ │  Listener       │                   │
-│  └─────────────┘ └─────┬──────────┘                   │
-│                        │                                │
-│              ┌─────────▼──────────┐                    │
-│              │  External APIs      │                    │
-│              │  • OpenWeatherMap   │                    │
-│              │  • CPCB AQI         │                    │
-│              │  • Mock Platform    │                    │
-│              │  • Razorpay Sandbox │                    │
-│              └────────────────────┘                    │
-└─────────────────────────────────────────────────────────┘
-```
-
----
+![GigShield Architecture](images/gigshield_architecture_diagram.svg)
 
 ## 8. Development Plan
 

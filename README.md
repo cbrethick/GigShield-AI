@@ -268,8 +268,6 @@ A native mobile app would require Play Store approval delays. A PWA gives mobile
 ## 🔗 Links
 
 - **Demo Video (Phase 1):** _[Link to be added]_
-- **Live Demo:** _[Link to be added]_
-
 ---
 
 > _"When the rain stops the deliveries, GigShield starts the payouts."_

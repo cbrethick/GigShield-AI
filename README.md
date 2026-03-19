@@ -387,9 +387,9 @@ For each rider with active policy in Zone X:
 
 | Member | Role |
 |---|---|
-| Member 1 | Frontend (Next.js PWA) + UI/UX |
-| Member 2 | Backend (FastAPI) + ML Models |
-| Member 3 | Node.js Triggers + DevOps + Integrations |
+| JEFFERY | Frontend (Next.js PWA) + UI/UX |
+| RETHICK CB | Backend (FastAPI) + ML Models |
+| ANUMITHA | Node.js Triggers + DevOps + Integrations |
 
 ---
 
@@ -397,7 +397,6 @@ For each rider with active policy in Zone X:
 
 - **Demo Video (Phase 1):** *[link]*
 - **Live Demo:** *[link]*
-- **GitHub:** *[link]*
 
 ---
 

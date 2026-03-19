@@ -24,7 +24,7 @@ We thought we had built something solid.
 
 ---
 
-### Then DEVTrails dropped the Market Crash PDF at 11 PM.
+### Then DEVTrails dropped the Market Crash PDF  
 
 We read it once. Then read it again.
 

@@ -3,11 +3,11 @@
 
 ---
 
-## "We built our entire fraud system in one night. Because we had to."
+## "We built our entire fraud system in one day. Because we had to."
 
 ---
 
-### Day 4. 10 PM. We thought we were done.
+### Day 4. We thought we were done.
 
 By Day 4 of DEVTrails 2026, Team GigShield was feeling genuinely confident.
 
@@ -24,7 +24,7 @@ We thought we had built something solid.
 
 ---
 
-### Then DEVTrails dropped the Market Crash PDF  
+### Then DEVTrails dropped the Market Crash PDF.
 
 We read it once. Then read it again.
 
@@ -52,9 +52,9 @@ And we had spent approximately **zero hours** thinking about how someone would a
 
 ---
 
-### The midnight call.
+### The emergency call.
 
-We opened a call at 11:30 PM. Three people. One shared screen. One question on the table:
+We got on a call immediately. Three people. One shared screen. One question on the table:
 
 **"What can a GPS spoofing app NOT fake?"**
 
@@ -73,9 +73,9 @@ GPS is a software coordinate. You change a number in an app and your phone repor
 
 You cannot fake that without hardware no Telegram syndicate has.
 
-That single realization rewired our entire fraud architecture overnight.
+That single realization rewired our entire fraud architecture in one day.
 
-By 3 AM we had:
+By the time we were done we had:
 - 6 independent anti-spoofing signals
 - 4-tier response system (Auto-approve → Grace queue → Manual review → Syndicate block)
 - DBSCAN temporal clustering to catch coordinated syndicate attacks
@@ -86,7 +86,7 @@ By 3 AM we had:
 
 ### The number that still haunts us.
 
-If we had submitted at Day 4 — before the Market Crash PDF —
+If we had submitted on Day 4 — before the Market Crash PDF —
 and a real fraud syndicate had hit us in Phase 2 —
 we would have **paid out to 500 fake claims** before blocking a single one.
 
@@ -114,9 +114,9 @@ That question is now permanently in our README. It is the first thing we ask abo
 
 ---
 
-### What we shipped by morning.
+### What we shipped by the deadline.
 
-Section 7 of our README — **"Adversarial Defense & Anti-Spoofing Strategy"** — was written between midnight and 4 AM the night before Phase 1 deadline.
+Section 7 of our README — **"Adversarial Defense & Anti-Spoofing Strategy"** — was written in one sitting on the final day of Phase 1.
 
 It is now the section we are most proud of in the entire submission.
 
@@ -125,7 +125,7 @@ The failure made the product better.
 ---
 
 *Team GigShield — DEVTrails 2026*
-*Three engineers. One midnight call. Six signals.*
+*Three engineers. One emergency call. Six signals.*
 
 ---
 

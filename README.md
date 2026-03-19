@@ -313,7 +313,7 @@ For each rider with active policy in Zone X:
   │         ADVERSARIAL DEFENSE ENGINE           │
   │                                              │
   │  Layer 1 — Fast rules (< 50ms)               │
-  │    · Duplicate claim check (Redis)            │
+  │    · Duplicate claim check (Redis)           │
   │    · Claim frequency limit                   │
   │    · Work hours validation                   │
   │                                              │

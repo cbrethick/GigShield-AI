@@ -71,27 +71,7 @@ GigShield is an AI-powered parametric insurance platform that:
 
 ### End-to-End Application Workflow
 
-```
-[Rider Onboarding]
-     ↓
-[Zone & Hours Profiling via GPS + Platform Data]
-     ↓
-[AI Risk Score Generated — XGBoost]
-     ↓
-[Weekly Policy Issued with Dynamic Premium]
-     ↓
-[Real-Time Disruption Monitoring — 15-min poll cycle]
-     ↓
-[Parametric Trigger Fires — Dual Condition: weather AND platform]
-     ↓
-[Multi-Layer Adversarial Defense — 6 signal checks]
-     ↓
-     ├── CLEAN      → Auto-approve → UPI payout (~10 min)
-     ├── FLAGGED    → Grace queue → 2-hr self-verify window
-     └── SYNDICATE  → Block + alert insurer + log for investigation
-     ↓
-[Rider Dashboard Updated | Insurer Analytics Refreshed]
-```
+![Workflow Diagram](docs/gigshield_adversarial_defense_engine.svg)
 
 ---
 
@@ -304,41 +284,7 @@ For Tier 2 and Tier 3 cases: if a rider has a **clean claims history** (2+ previ
 
 ### 7.4 Defense Architecture Summary
 
-```
-Trigger fires for Zone X
-          ↓
-For each rider with active policy in Zone X:
-          ↓
-  ┌──────────────────────────────────────────────┐
-  │         ADVERSARIAL DEFENSE ENGINE           │
-  │                                              │
-  │  Layer 1 — Fast rules (< 50ms)               │
-  │    · Duplicate claim check (Redis)           │
-  │    · Claim frequency limit                   │
-  │    · Work hours validation                   │
-  │                                              │
-  │  Layer 2 — Signal scoring (< 200ms)          │
-  │    · Mobility fingerprint similarity         │
-  │    · Accelerometer variance                  │
-  │    · Cell tower vs GPS region                │
-  │    · Platform activity correlation           │
-  │    · Device fingerprint graph                │
-  │                                              │
-  │  Layer 3 — Syndicate detection (async)       │
-  │    · DBSCAN on GPS arrival timestamps        │
-  │    · Fires SYNDICATE_ALERT if cluster found  │
-  │                                              │
-  │  Combined fraud score: 0.0 → 1.0             │
-  │  Loyalty modifier: -30pts if clean history   │
-  └──────────────────────────────────────────────┘
-          ↓
-  Score < 0.25   →  AUTO_APPROVE     → UPI in 10 min
-  Score 0.25–0.5 →  GRACE_QUEUE     → 2-hr recovery window
-  Score 0.5–0.75 →  MANUAL_REVIEW   → Human reviewer
-  Score > 0.75   →  SYNDICATE_BLOCK → Insurer alert + investigation
-  OR SYNDICATE_ALERT
-```
-
+![Defense Architecture](docs/gigshield_platform_flow.svg)
 ---
 
 ## 8. Tech Stack & Architecture

@@ -71,7 +71,7 @@ GigShield is an AI-powered parametric insurance platform that:
 
 ### End-to-End Application Workflow
 
-![Workflow Diagram](docs/gigshield_adversarial_defense_engine.svg)
+![Workflow Diagram](images/gigshield_adversarial_defense_engine.svg)
 
 ---
 
@@ -284,7 +284,7 @@ For Tier 2 and Tier 3 cases: if a rider has a **clean claims history** (2+ previ
 
 ### 7.4 Defense Architecture Summary
 
-![Defense Architecture](docs/gigshield_platform_flow.svg)
+![Defense Architecture](images/gigshield_platform_flow.svg)
 ---
 
 ## 8. Tech Stack & Architecture

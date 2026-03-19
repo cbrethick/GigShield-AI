@@ -341,8 +341,7 @@ For Tier 2 and Tier 3 cases: if a rider has a **clean claims history** (2+ previ
 
 ## Links
 
-- **Demo Video (Phase 1):** *[SOON]*
-- **Live Demo:** *[link]*
+- **Demo Video (Phase 1):** *[https://drive.google.com/file/d/1otSFYJbscJ2AQvKicCFPgvFkGe-ge0WJ/view?usp=sharing]*
 
 ---
 

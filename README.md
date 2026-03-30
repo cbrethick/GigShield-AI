@@ -342,7 +342,8 @@ For Tier 2 and Tier 3 cases: if a rider has a **clean claims history** (2+ previ
 ## Links
 
 - **Demo Video (Phase 1):** *[https://drive.google.com/file/d/1otSFYJbscJ2AQvKicCFPgvFkGe-ge0WJ/view?usp=sharing]*
-
----
+- **Demo Video (Phase 2):** *[Add your Phase 2 demo video link here]*
+- **Working Flow of GigShield (A-to-Z User Journey):** *[https://docs.google.com/document/d/1iY1RXoYvIFcCpAB63u5oArhq6brKYp3RFs-VskJQknA/edit?usp=sharing]*
+- **GigShield Production Deployment Stack (A-to-Z System Architecture):** *[https://docs.google.com/document/d/191XSIEZxsFC9Ba6hIAjQSrxvocN8sHzs24kSHVCKqQs/edit?usp=sharing]*
 
 > *"When the rain stops the deliveries, GigShield starts the payouts. And when the syndicates try to drain the pool — GigShield catches them first."*

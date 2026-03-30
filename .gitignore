@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.pkl
+.env
+venv/
+env/
+.venv/
+dist/
+*.egg-info/
+
+# Node
+node_modules/
+.next/
+.nuxt/
+dist/
+.cache/
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.production
+.env.*.local
+
+# DB
+*.sqlite
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Railway
+.railway/
+
+# Vercel
+.vercel/

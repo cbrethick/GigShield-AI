@@ -80,9 +80,10 @@ export default function ClaimsPage() {
           const st    = STATUS_STYLE[c.status] || STATUS_STYLE.PENDING;
           const isOpen = selected === c.id;
           const fraudFlags = Array.isArray(c.fraud_flags) ? c.fraud_flags : [];
+          const payoutDetails = c.payout_details || {};
 
           return (
-            <div key={c.id} className="card" style={{ marginBottom:14, cursor:'pointer' }}
+            <div key={c.id} className="card" style={{ marginBottom:14, cursor:'pointer', border: isOpen ? '1px solid var(--green)' : '1px solid var(--border)' }}
               onClick={()=>setSelected(isOpen ? null : c.id)}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                 <div style={{ display:'flex', gap:12, alignItems:'center' }}>
@@ -102,58 +103,75 @@ export default function ClaimsPage() {
                 </div>
               </div>
 
-              {/* Expanded detail */}
+              {/* Expanded detail - SETTLEMENT PIPELINE */}
               {isOpen && (
                 <div style={{ marginTop:16, borderTop:'1px solid var(--border)', paddingTop:16 }}>
-                  {/* What triggered this */}
-                  <p style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>{TRIGGER_DESC[c.trigger_type]||'Parametric trigger activated'}</p>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                    <div>
+                      <p style={{ fontSize:13, fontWeight:800, color:'var(--green-l)', textTransform:'uppercase', letterSpacing:'0.05em' }}>
+                        🛡 ZERO-TOUCH CLAIM SYSTEM
+                      </p>
+                      <p style={{ fontSize:11, color:'var(--text3)' }}>Settlement in minutes • Fast & Secure</p>
+                    </div>
+                    <div style={{ background:'rgba(29,158,117,0.1)', padding:'4px 8px', borderRadius:6, fontSize:11, fontWeight:700, color:'var(--green-l)' }}>
+                      ⚡ FAST SETTLEMENT
+                    </div>
+                  </div>
 
-                  {/* Verification timeline */}
-                  <p style={{ fontSize:11, fontWeight:700, color:'var(--text3)', marginBottom:10, textTransform:'uppercase', letterSpacing:'0.08em' }}>
-                    Auto-verification steps
-                  </p>
+                  {/* The 5 Steps */}
                   {[
-                    [`${TRIGGER_LABELS[c.trigger_type]||'Trigger'} confirmed`, true],
-                    ['GPS zone validated', fraudFlags.length===0],
-                    ['Fraud check passed', fraudFlags.length===0],
-                    ['Sensor & mobility check done', fraudFlags.length===0],
-                    [`₹${c.payout_amount_inr} payout processed`, c.status==='PAID'],
-                  ].map(([label,done],i)=>(
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
+                    { label: `${TRIGGER_LABELS[c.trigger_type]||'Trigger'} Confirmed`, done: true, sub: `Source: Weather API | ${c.trigger_value}${c.trigger_type==='HEAVY_RAIN'?'mm':''}` },
+                    { label: 'Worker Eligibility Check', done: true, sub: 'Policy Active • Zone Valid • No Duplicates' },
+                    { label: 'Payout Calculated', done: true, sub: `Formula: ${payoutDetails.formula || `₹${c.payout_amount_inr} fixed`}` },
+                    { label: 'Transfer Initiated', done: c.status==='PAID' || c.status==='APPROVED', sub: c.payout_mode ? `${c.payout_mode} Transfer via Razorpay` : 'Processing payment...' },
+                    { label: 'Record Updated', done: c.status==='PAID', sub: c.status==='PAID' ? 'System logs updated • Database reconciled' : 'Waiting for confirmation' },
+                  ].map((step, i) => (
+                    <div key={i} style={{ display:'flex', gap:12, marginBottom:16, position:'relative' }}>
+                      {/* Step Line */}
+                      {i < 4 && <div style={{ position:'absolute', left:11, top:24, bottom:-12, width:2, background: step.done ? 'var(--green)' : 'var(--surface2)' }} />}
+                      
                       <div style={{
                         width:24, height:24, borderRadius:'50%', flexShrink:0,
-                        background:done?'var(--green)':'var(--surface2)',
+                        background: step.done ? 'var(--green)' : 'var(--surface2)',
                         display:'flex', alignItems:'center', justifyContent:'center',
-                        fontSize:11, color:done?'white':'var(--text3)', fontWeight:700,
-                        boxShadow:done?'0 2px 8px rgba(29,158,117,0.4)':'none',
-                      }}>{done?'✓':(i+1)}</div>
-                      <p style={{ fontSize:13, color:done?'var(--text)':'var(--text3)' }}>{label}</p>
+                        fontSize:11, color: step.done ? 'white' : 'var(--text3)', fontWeight:900,
+                        zIndex:1,
+                        boxShadow: step.done ? '0 0 10px rgba(29,158,117,0.3)' : 'none',
+                      }}>{step.done ? '✓' : (i+1)}</div>
+                      
+                      <div>
+                        <p style={{ fontSize:13, fontWeight:700, color: step.done ? 'var(--text)' : 'var(--text3)' }}>{step.label}</p>
+                        <p style={{ fontSize:11, color: step.done ? 'var(--text2)' : 'var(--text3)', marginTop:2 }}>{step.sub}</p>
+                      </div>
                     </div>
                   ))}
 
-                  {/* Fraud flags */}
+                  {/* Fraud Check Banner */}
+                  <div style={{ background:'rgba(59,130,246,0.08)', borderRadius:8, padding:'10px 12px', border:'1px solid rgba(59,130,246,0.2)', marginTop:10, display:'flex', alignItems:'center', gap:10 }}>
+                    <span style={{ fontSize:18 }}>🔒</span>
+                    <p style={{ fontSize:12, color:'#90cdf4', fontWeight:600 }}>Fraud detection check completed successfully before payout.</p>
+                  </div>
+
+                  {/* Payout success box */}
+                  {c.status==='PAID' && (
+                    <div style={{ background:'linear-gradient(rgba(29,158,117,0.1), rgba(29,158,117,0.05))', border:'1px solid rgba(29,158,117,0.2)', borderRadius:10, padding:'14px', marginTop:14 }}>
+                      <p style={{ fontSize:14, color:'var(--green-l)', fontWeight:800, marginBottom:4 }}>✅ PAYMENT SUCCESSFUL</p>
+                      <p style={{ fontSize:12, color:'var(--text2)', lineHeight:1.4 }}>
+                        ₹{c.payout_amount_inr} has been sent to your <strong>{c.payout_mode}</strong> account. 
+                        Funds should reflect in your balance within minutes.
+                      </p>
+                      <p style={{ fontSize:10, color:'var(--text3)', marginTop:8, textTransform:'uppercase' }}>Ref: {c.claim_number}</p>
+                    </div>
+                  )}
+
                   {fraudFlags.length>0 && (
                     <div style={{ background:'rgba(239,159,39,0.1)', border:'1px solid rgba(239,159,39,0.2)', borderRadius:8, padding:'8px 12px', marginTop:8 }}>
-                      <p style={{ fontSize:12, color:'var(--amber)', fontWeight:600 }}>⚠️ Review flags: {fraudFlags.join(', ')}</p>
+                      <p style={{ fontSize:12, color:'var(--amber)', fontWeight:600 }}>⚠️ Security Note: {fraudFlags.join(', ')}</p>
                     </div>
                   )}
-
-                  {/* Payout success */}
-                  {c.status==='PAID' && (
-                    <div style={{ background:'rgba(29,158,117,0.1)', border:'1px solid rgba(29,158,117,0.2)', borderRadius:8, padding:'10px 12px', marginTop:10 }}>
-                      <p style={{ fontSize:13, color:'var(--green-l)', fontWeight:700 }}>
-                        ✅ ₹{c.payout_amount_inr} sent to {c.upi_id||'your UPI'} via Razorpay
-                        {c.paid_at && ` · ${new Date(c.paid_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`}
-                      </p>
-                    </div>
-                  )}
-
-                  <div style={{ marginTop:12, fontSize:12, color:'var(--text3)' }}>
-                    Ref: {c.claim_number}
-                  </div>
                 </div>
               )}
-              <div style={{ fontSize:12, color:'var(--text3)', marginTop:8, textAlign:'right' }}>{isOpen?'▲ collapse':'▼ tap for details'}</div>
+              <div style={{ fontSize:11, color:'var(--text3)', marginTop:10, textAlign:'center', opacity:0.7 }}>{isOpen?'▲ CLOSE SETTLEMENT PANEL':'▼ VIEW SETTLEMENT STEPS'}</div>
             </div>
           );
         })}

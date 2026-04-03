@@ -21,6 +21,9 @@ class ProfileUpdate(BaseModel):
     work_start_hour: int = 9
     work_end_hour: int = 21
     upi_id: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+    bank_name: Optional[str] = None
 
 class GPSUpdate(BaseModel):
     lat: float
@@ -37,6 +40,9 @@ def get_profile(rider: Rider = Depends(get_current_rider)):
         "avg_daily_hours": rider.avg_daily_hours,
         "avg_daily_earnings": rider.avg_daily_earnings,
         "upi_id": rider.upi_id,
+        "bank_account_number": rider.bank_account_number,
+        "bank_ifsc": rider.bank_ifsc,
+        "bank_name": rider.bank_name,
         "is_active": rider.is_active,
     }
 
@@ -57,6 +63,9 @@ def update_profile(
     rider.work_start_hour = data.work_start_hour
     rider.work_end_hour = data.work_end_hour
     rider.upi_id = data.upi_id
+    rider.bank_account_number = data.bank_account_number
+    rider.bank_ifsc = data.bank_ifsc
+    rider.bank_name = data.bank_name
     db.commit()
     db.refresh(rider)
 

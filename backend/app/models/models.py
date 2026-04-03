@@ -20,6 +20,7 @@ class ClaimStatus(str, enum.Enum):
     MANUAL_REVIEW = "MANUAL_REVIEW"
     PAID = "PAID"
     REJECTED = "REJECTED"
+    PAYOUT_FAILED = "PAYOUT_FAILED"
 
 class TriggerType(str, enum.Enum):
     HEAVY_RAIN = "HEAVY_RAIN"
@@ -44,6 +45,9 @@ class Rider(Base):
     work_start_hour = Column(Integer, default=9)
     work_end_hour = Column(Integer, default=21)
     upi_id = Column(String(100), nullable=True)
+    bank_account_number = Column(String(50), nullable=True)
+    bank_ifsc = Column(String(20), nullable=True)
+    bank_name = Column(String(100), nullable=True)
     device_fingerprint = Column(String(200), nullable=True)
     last_gps_lat = Column(Float, nullable=True)
     last_gps_lng = Column(Float, nullable=True)
@@ -89,11 +93,13 @@ class Claim(Base):
     zone = Column(String(100), nullable=False)
     duration_hours = Column(Float, default=0.0)
     payout_amount_inr = Column(Float, default=0.0)
+    payout_mode = Column(String(20), nullable=True)  # UPI / IMPS
     status = Column(String, default=ClaimStatus.PENDING)
     fraud_score = Column(Float, nullable=True)
     fraud_flags = Column(Text, nullable=True)  # JSON list
     razorpay_payout_id = Column(String(100), nullable=True)
     razorpay_fund_account_id = Column(String(100), nullable=True)
+    payout_details = Column(Text, nullable=True)  # JSON logic/formula
     paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

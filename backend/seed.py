@@ -63,6 +63,9 @@ for i, name in enumerate(NAMES):
         work_start_hour=9,
         work_end_hour=21,
         upi_id=f"{name.split()[0].lower()}{phone[-4:]}@okicici",
+        bank_account_number=f"501004{random.randint(100000,999999)}",
+        bank_ifsc="HDFC0001234",
+        bank_name="HDFC Bank",
     )
     db.add(rider)
     db.flush()
@@ -115,6 +118,8 @@ for i, name in enumerate(NAMES):
             zone=zone_info[0],
             duration_hours=duration,
             payout_amount_inr=payout,
+            payout_mode=random.choice(["UPI", "IMPS"]),
+            payout_details=json.dumps({"formula": f"₹{round(hourly,2)}/hr × {duration} hrs", "hourly_rate": hourly}),
             status=status,
             fraud_score=random.uniform(0, 0.2),
             fraud_flags=json.dumps([]),

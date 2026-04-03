@@ -52,6 +52,8 @@ def get_my_claims(
             "zone": c.zone,
             "trigger_value": c.trigger_value,
             "payout_amount_inr": c.payout_amount_inr,
+            "payout_mode": c.payout_mode,
+            "payout_details": json.loads(c.payout_details or "{}"),
             "status": c.status,
             "fraud_flags": json.loads(c.fraud_flags or "[]"),
             "paid_at": c.paid_at.isoformat() if c.paid_at else None,

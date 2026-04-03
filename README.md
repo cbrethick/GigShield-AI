@@ -342,7 +342,7 @@ For Tier 2 and Tier 3 cases: if a rider has a **clean claims history** (2+ previ
 ## Links
 
 - **Demo Video (Phase 1):** *[https://drive.google.com/file/d/1otSFYJbscJ2AQvKicCFPgvFkGe-ge0WJ/view?usp=sharing]*
-- **Demo Video (Phase 2):** *[Add your Phase 2 demo video link here]*
+- **Demo Video (Phase 2):** *[https://drive.google.com/file/d/1uYF4OhWYmSEnGOE84zt1C5qHyMMue51q/view?usp=sharing]*
 - **Working Flow of GigShield (A-to-Z User Journey):** *[https://docs.google.com/document/d/1iY1RXoYvIFcCpAB63u5oArhq6brKYp3RFs-VskJQknA/edit?usp=sharing]*
 - **GigShield Production Deployment Stack (A-to-Z System Architecture):** *[https://docs.google.com/document/d/191XSIEZxsFC9Ba6hIAjQSrxvocN8sHzs24kSHVCKqQs/edit?usp=sharing]*
 

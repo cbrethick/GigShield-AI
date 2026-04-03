@@ -154,20 +154,51 @@ export default function OnboardingPage() {
             style={{ width:'100%', marginBottom:20 }} />
 
           <label style={{ fontSize:13, color:'var(--text2)', display:'block', marginBottom:8 }}>UPI ID <span style={{ color:'var(--text3)' }}>(for instant payouts)</span></label>
-          <input className="input-field" placeholder="yourname@upi" style={{ marginBottom:16 }}
-            value={form.upi_id} onChange={e=>setForm(f=>({...f,upi_id:e.target.value}))} />
+          <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+            <input className="input-field" placeholder="yourname@upi" style={{ flex:1 }}
+              value={form.upi_id} onChange={e=>setForm(f=>({...f,upi_id:e.target.value}))} />
+            <button className="btn-outline" style={{ padding:'0 15px', fontSize:12 }} 
+              onClick={async ()=>{
+                try {
+                  const res = await api.post('/verify/vpa', { vpa: form.upi_id });
+                  if(res.success) alert(`Verified: ${res.customer_name}`);
+                  else alert(res.message);
+                } catch(e) { alert("Invalid UPI ID"); }
+              }}>Verify</button>
+          </div>
 
           <div style={{ background:'rgba(255,255,255,0.03)', borderRadius:12, padding:'16px 14px', border:'1px dashed var(--border)', marginBottom:20 }}>
-            <p style={{ fontSize:12, fontWeight:700, color:'var(--text3)', marginBottom:10, textTransform:'uppercase' }}>Bank Fallback (if UPI fails)</p>
-            <input className="input-field" placeholder="Account Number" style={{ marginBottom:10, fontSize:13 }}
-              value={form.bank_account_number} onChange={e=>setForm(f=>({...f,bank_account_number:e.target.value}))} />
+            <p style={{ fontSize:12, fontWeight:700, color:'var(--text3)', marginBottom:12, textTransform:'uppercase' }}>Bank Fallback (if UPI fails)</p>
+            
+            <input className="input-field" placeholder="IFSC Code" style={{ marginBottom:10, fontSize:13 }}
+              value={form.bank_ifsc} 
+              onChange={async (e)=>{
+                const val = e.target.value.toUpperCase();
+                setForm(f=>({...f, bank_ifsc: val}));
+                if(val.length === 11) {
+                  try {
+                    const res = await api.get(`/verify/ifsc/${val}`);
+                    setForm(f=>({...f, bank_name: res.bank}));
+                  } catch(err) { setForm(f=>({...f, bank_name: 'Invalid IFSC'})); }
+                }
+              }} />
+            
+            <input className="input-field" placeholder="Bank Name" style={{ marginBottom:10, fontSize:13, opacity:0.7 }}
+              value={form.bank_name} readOnly />
+
             <div style={{ display:'flex', gap:8 }}>
-              <input className="input-field" placeholder="IFSC Code" style={{ fontSize:13 }}
-                value={form.bank_ifsc} onChange={e=>setForm(f=>({...f,bank_ifsc:e.target.value}))} />
-              <input className="input-field" placeholder="Bank Name" style={{ fontSize:13 }}
-                value={form.bank_name} onChange={e=>setForm(f=>({...f,bank_name:e.target.value}))} />
+              <input className="input-field" placeholder="Account Number" style={{ flex:1, fontSize:13 }}
+                value={form.bank_account_number} onChange={e=>setForm(f=>({...f,bank_account_number:e.target.value}))} />
+              <button className="btn-outline" style={{ padding:'0 15px', fontSize:12 }}
+                onClick={async ()=>{
+                  try {
+                    const res = await api.post('/verify/bank', { account_number: form.bank_account_number, ifsc: form.bank_ifsc });
+                    if(res.success) alert(`Penny Drop Success! Verified: ${res.account_holder_name}`);
+                    else alert(res.message);
+                  } catch(e) { alert("Verification failed"); }
+                }}>Verify</button>
             </div>
-            <p style={{ fontSize:11, color:'var(--text3)', marginTop:8 }}>Money is sent to bank via IMPS if your UPI is not reachable.</p>
+            <p style={{ fontSize:11, color:'var(--text3)', marginTop:8 }}>Sends ₹1 to verify your account (Penny Drop).</p>
           </div>
 
           {error && <p style={{ color:'var(--red)', fontSize:13, marginBottom:12 }}>{error}</p>}

@@ -93,9 +93,70 @@ async def process_payout(
             )
             return resp.json()
     except Exception as e:
-        print(f"[Razorpay] payout error: {e}")
-        return {
-            "id": f"pay_err_{claim_id[:8]}",
-            "status": "failed",
-            "error": str(e),
-        }
+        print(f"Payout Error: {str(e)}")
+        return {"status": "failed", "error": str(e)}
+
+def validate_bank_account(account_number: str, ifsc: str):
+    """Real-time bank verification (Penny Drop) using RazorpayX."""
+    if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+        # Mock mode
+        return {"status": "active", "results": {"account_holder_name": "Demo User (Verified)"}}
+
+    import requests
+    try:
+        # 1. Create a dummy contact for validation
+        contact_res = requests.post(f"{RAZORPAYX_API_BASE}/contacts", 
+            auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+            json={"name": "Verification User", "type": "vendor", "reference_id": f"ref_{int(datetime.utcnow().timestamp())}"})
+        contact_id = contact_res.json().get("id")
+
+        # 2. Create fund account
+        fund_res = requests.post(f"{RAZORPAYX_API_BASE}/fund_accounts",
+            auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+            json={
+                "contact_id": contact_id,
+                "account_type": "bank_account",
+                "bank_account": {"name": "Verification", "ifsc": ifsc, "account_number": account_number}
+            })
+        fund_account_id = fund_res.json().get("id")
+
+        # 3. Trigger Validation (Penny Drop)
+        validate_res = requests.post(f"{RAZORPAYX_API_BASE}/fund_accounts/validations",
+            auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+            json={"fund_account_id": fund_account_id, "amount": 100}) # 100 paise = 1 INR
+        
+        return validate_res.json()
+    except Exception as e:
+        print(f"Validation Error: {str(e)}")
+        return {"status": "failed", "error": str(e)}
+
+def validate_vpa(vpa: str):
+    """Real-time UPI ID verification using RazorpayX."""
+    if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+        return {"status": "active", "results": {"customer_name": "Demo User (Verified)"}}
+
+    import requests
+    try:
+        # Similar flow to bank but for VPA
+        contact_res = requests.post(f"{RAZORPAYX_API_BASE}/contacts", 
+            auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+            json={"name": "VPA Verification", "type": "customer"})
+        contact_id = contact_res.json().get("id")
+
+        fund_res = requests.post(f"{RAZORPAYX_API_BASE}/fund_accounts",
+            auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+            json={
+                "contact_id": contact_id,
+                "account_type": "vpa",
+                "vpa": {"address": vpa}
+            })
+        fund_account_id = fund_res.json().get("id")
+
+        validate_res = requests.post(f"{RAZORPAYX_API_BASE}/fund_accounts/validations",
+            auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+            json={"fund_account_id": fund_account_id})
+        
+        return validate_res.json()
+    except Exception as e:
+        print(f"VPA Validation Error: {str(e)}")
+        return {"status": "failed", "error": str(e)}

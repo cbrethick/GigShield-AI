@@ -9,7 +9,6 @@ export default function LoginPage() {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [demoOtp, setDemoOtp] = useState('');
 
   useEffect(() => {
     if (isLoggedIn()) router.replace('/dashboard');
@@ -20,8 +19,7 @@ export default function LoginPage() {
     if (phone.length < 10) { setError('Enter a valid 10-digit number'); return; }
     setLoading(true); setError('');
     try {
-      const res = await sendOTP('+91' + phone);
-      setDemoOtp(res.data.demo_otp || '123456');
+      await sendOTP('+91' + phone);
       setStep('otp');
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to send OTP');
@@ -108,24 +106,10 @@ export default function LoginPage() {
           </form>
         ) : (
           <form onSubmit={handleVerifyOTP}>
-            <h2 style={{ fontSize: 19, fontWeight: 700, marginBottom: 6 }}>Enter OTP</h2>
-            <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 4 }}>Sent to +91 {phone}</p>
-
-            {demoOtp && (
-              <div style={{
-                background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.2)',
-                borderRadius: 10, padding: '10px 14px', marginBottom: 16,
-              }}>
-                <p style={{ color: 'var(--green-l)', fontSize: 13, fontWeight: 500 }}>
-                  🎯 Demo OTP: <strong style={{ letterSpacing: 4 }}>{demoOtp}</strong>
-                </p>
-              </div>
-            )}
-
             <input
               className="input-field"
               style={{ letterSpacing: 10, fontSize: 24, textAlign: 'center', marginBottom: 16, fontWeight: 700 }}
-              type="tel" placeholder="——————"
+              type="tel" placeholder="______"
               value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
               maxLength={6} autoFocus
             />
@@ -142,10 +126,9 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* Demo hint */}
-      <p style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 12, marginTop: 20, lineHeight: 1.6 }}>
-        Demo: any number · OTP <strong style={{ color: 'var(--text2)' }}>123456</strong>
-        <br />+919876500001 → T. Nagar rider with active policy
+      {/* Live Support Hint */}
+      <p style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 12, marginTop: 24, lineHeight: 1.6 }}>
+        Secure login via 2FA · Managed by GigShield Core
       </p>
     </div>
   );

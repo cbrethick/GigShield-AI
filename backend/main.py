@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.db.database import engine, Base
-from app.routers import auth, onboarding, policy, claims, analytics
+from app.routers import auth, onboarding, policy, claims, verification, analytics
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -37,8 +37,9 @@ app.add_middleware(
 app.include_router(auth.router,        prefix="/auth",      tags=["Auth"])
 app.include_router(onboarding.router,  prefix="/riders",    tags=["Riders"])
 app.include_router(policy.router,      prefix="/policy",    tags=["Policy"])
-app.include_router(claims.router,      prefix="/claims",    tags=["Claims"])
-app.include_router(analytics.router,   prefix="/analytics", tags=["Analytics"])
+app.include_router(claims.router,      prefix="/api/claims", tags=["Claims"])
+app.include_router(verification.router, prefix="/api/verify", tags=["Verification"])
+app.include_router(analytics.router,   prefix="/api/analytics", tags=["Analytics"])
 
 @app.get("/")
 def root():

@@ -54,10 +54,11 @@ def verify_otp(req: VerifyOTPRequest, db: Session = Depends(get_db)):
 
     stored_otp = redis.get(f"otp:{phone}")
 
-    # Demo mode: accept "123456" always
-    demo_mode = req.otp == "123456"
+    # Real SMS OTP verification
+    from app.services.auth_service import verify_sms_otp
+    is_valid = verify_sms_otp(phone, req.otp)
 
-    if not demo_mode and (not stored_otp or stored_otp != req.otp):
+    if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
     redis.delete(f"otp:{phone}")

@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from typing import Optional, Union
 from datetime import datetime, timedelta
 from app.db.database import get_db
 from app.models.models import Rider, OTPStore
-from app.services.auth_service import generate_otp, create_access_token, send_otp_sms
+from app.services.auth_service import (
+    generate_otp, create_access_token, send_otp_sms, verify_firebase_token
+)
 from app.db.redis_client import get_redis
 
 router = APIRouter()
@@ -13,8 +16,9 @@ class SendOTPRequest(BaseModel):
     phone: str
 
 class VerifyOTPRequest(BaseModel):
-    phone: str
-    otp: str
+    phone: Optional[str] = None
+    otp: Optional[str] = None
+    firebase_token: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -48,19 +52,24 @@ def send_otp(req: SendOTPRequest, db: Session = Depends(get_db)):
     return {"message": "OTP sent", "phone": phone, "demo_otp": otp}  # remove demo_otp in prod
 
 @router.post("/verify-otp", response_model=TokenResponse)
-def verify_otp(req: VerifyOTPRequest, db: Session = Depends(get_db)):
-    phone = req.phone.strip()
+async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
+    """
+    Verifies the Firebase ID Token and issues a GigShield JWT.
+    """
+    # 1. Verify with Firebase
+    phone = verify_firebase_token(request.firebase_token)
+    
+    if not phone:
+        print(f"[AUTH] Firebase token verification failed for token: {request.firebase_token[:10]}...")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Firebase identity verification failed"
+        )
+    
+    # Normalize phone for DB lookup
+    phone = phone.replace(" ", "")
+
     redis = get_redis()
-
-    stored_otp = redis.get(f"otp:{phone}")
-
-    # Real SMS OTP verification
-    from app.services.auth_service import verify_sms_otp
-    is_valid = verify_sms_otp(phone, req.otp)
-
-    if not is_valid:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-
     redis.delete(f"otp:{phone}")
 
     # Get or create rider

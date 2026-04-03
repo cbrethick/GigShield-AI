@@ -31,10 +31,7 @@ api.interceptors.response.use(
 );
 
 // ── Auth ──
-export const sendOTP   = (phone) => api.post('/auth/send-otp', { phone });
-export const verifyOTP = (phone, otp) => api.post('/auth/verify-otp', { phone, otp });
-
-// ── Rider ──
+// Handled below in the Supabase section
 export const getProfile    = () => api.get('/riders/me');
 export const updateProfile = (data) => api.post('/riders/profile', data);
 export const updateGPS     = (lat, lng) => api.post('/riders/gps', { lat, lng });
@@ -54,13 +51,20 @@ export const simulateTrigger = (data) => api.post('/claims/simulate-trigger', da
 export const getInsurerDashboard = () => api.get('/analytics/insurer');
 export const getLiveStats        = () => api.get('/analytics/live');
 
-// ── Weather (direct from backend) ──
-export const getLiveWeather = () => api.get('/analytics/weather');
+// ── Auth ──
+export const sendOTP   = (phone) => api.post('/auth/send-otp', { phone });
+export const verifyOTP = (phone, firebase_token) => api.post('/auth/verify-otp', { phone, firebase_token });
 
 // ── Auth helpers ──
+export const login      = (phone, firebase_token) => api.post('/auth/verify-otp', { phone, firebase_token }).then(res => res.data);
+export const register   = (data) => api.post('/auth/onboarding', data).then(res => res.data);
+export const setToken   = (token) => { if (typeof window !== 'undefined') localStorage.setItem('gs_token', token); };
 export const saveToken  = (token) => { if (typeof window !== 'undefined') localStorage.setItem('gs_token', token); };
 export const getToken   = () => { if (typeof window !== 'undefined') return localStorage.getItem('gs_token'); return null; };
 export const clearToken = () => { if (typeof window !== 'undefined') { localStorage.removeItem('gs_token'); localStorage.removeItem('gs_rider_id'); } };
 export const isLoggedIn = () => !!getToken();
+
+// ── Weather (direct from backend) ──
+export const getLiveWeather = () => api.get('/analytics/weather');
 
 export default api;

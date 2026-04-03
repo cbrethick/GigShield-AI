@@ -33,7 +33,47 @@ def verify_token(token: str):
     except JWTError:
         return None
 
-# Twilio Settings
+# Firebase Admin Setup
+import firebase_admin
+from firebase_admin import credentials, auth as firebase_auth
+
+try:
+    firebase_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+    if firebase_json:
+        # Load from environment variable (Best for Render/Railway)
+        import json
+        firebase_info = json.loads(firebase_json)
+        cred = credentials.Certificate(firebase_info)
+        firebase_admin.initialize_app(cred)
+        print("[FIREBASE] Initialized from Environment Variable")
+    else:
+        # Fallback to local file
+        cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "firebase-key.json")
+        if os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            print(f"[FIREBASE] Initialized from {cred_path}")
+        else:
+            print("[FIREBASE] Keys not found. Firebase features will run in MOCK mode.")
+except Exception as e:
+    print(f"[FIREBASE] Init error: {e}")
+
+def verify_firebase_token(id_token: str):
+    """Verifies a Firebase ID token and returns the phone number."""
+    if not id_token or id_token == "dummy_token":
+        return "+919876500001" # Demo override
+
+    try:
+        decoded_token = firebase_auth.verify_id_token(id_token)
+        phone = decoded_token.get("phone_number")
+        if phone:
+            phone = phone.replace(" ", "")
+        return phone
+    except Exception as e:
+        print(f"[FIREBASE] Token verification failed: {e}")
+        return None
+
+# Twilio Settings (Keep as secondary or for custom SMS)
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID")

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { sendOTP, verifyOTP, saveToken, isLoggedIn } from '../lib/api';
+import Head from 'next/head';
+import { login, setToken, isLoggedIn } from '../lib/api';
+import { auth } from '../lib/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -9,39 +12,87 @@ export default function LoginPage() {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
 
   useEffect(() => {
     if (isLoggedIn()) router.replace('/dashboard');
+    
+    return () => {
+      if (typeof window !== 'undefined' && window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+    };
   }, []);
+
+  const setupRecaptcha = () => {
+    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible',
+          'callback': (response) => { console.log("reCAPTCHA verified"); },
+          'expired-callback': () => { console.log("reCAPTCHA expired"); }
+        });
+      } catch (err) {
+        console.error("reCAPTCHA init error:", err);
+      }
+    }
+  };
 
   async function handleSendOTP(e) {
     e.preventDefault();
     if (phone.length < 10) { setError('Enter a valid 10-digit number'); return; }
     setLoading(true); setError('');
+    
+    console.log("Starting Firebase OTP flow for:", phone);
+    setupRecaptcha();
+    
+    const appVerifier = window.recaptchaVerifier;
+    const formatPhone = '+91' + phone;
+
     try {
-      await sendOTP('+91' + phone);
+      const confirmation = await signInWithPhoneNumber(auth, formatPhone, appVerifier);
+      console.log("SMS Sent successfully!");
+      setConfirmationResult(confirmation);
       setStep('otp');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to send OTP');
+      console.error("Firebase Sign-in Error:", err);
+      setError(err.message || 'Failed to send OTP. Ensure "Phone Auth" is enabled in Firebase Console.');
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
     } finally { setLoading(false); }
   }
 
   async function handleVerifyOTP(e) {
     e.preventDefault();
-    if (otp.length < 4) { setError('Enter the OTP'); return; }
+    if (otp.length < 6) { setError('Enter 6-digit OTP'); return; }
     setLoading(true); setError('');
+
     try {
-      const res = await verifyOTP('+91' + phone, otp);
-      saveToken(res.data.access_token);
-      localStorage.setItem('gs_rider_id', res.data.rider_id);
-      router.push(res.data.is_new_rider ? '/onboarding' : '/dashboard');
+      const result = await confirmationResult.confirm(otp);
+      const idToken = await result.user.getIdToken();
+      
+      const res = await login('+91' + phone, idToken);
+      
+      if (res.is_new) {
+        router.push(`/onboarding?phone=${phone}&token=${idToken}`);
+      } else {
+        setToken(res.access_token);
+        router.push('/dashboard');
+      }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid OTP');
+      console.error("Verification Error:", err);
+      const msg = err.response?.data?.detail || err.message || 'Invalid OTP';
+      setError(msg);
     } finally { setLoading(false); }
   }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '0 20px' }}>
+      <div id="recaptcha-container"></div>
+      
       {/* Hero Section */}
       <div style={{ textAlign: 'center', padding: '60px 0 40px' }}>
         {/* Logo */}
@@ -106,6 +157,8 @@ export default function LoginPage() {
           </form>
         ) : (
           <form onSubmit={handleVerifyOTP}>
+            <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 16 }}>An OTP has been sent to +91 {phone}</p>
+            
             <input
               className="input-field"
               style={{ letterSpacing: 10, fontSize: 24, textAlign: 'center', marginBottom: 16, fontWeight: 700 }}
@@ -128,7 +181,7 @@ export default function LoginPage() {
 
       {/* Live Support Hint */}
       <p style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 12, marginTop: 24, lineHeight: 1.6 }}>
-        Secure login via 2FA · Managed by GigShield Core
+        Secure login via 2FA · Managed by Firebase Identity
       </p>
     </div>
   );

@@ -3,12 +3,22 @@ otp - 123456
 
 
 
-🛡️ Phase 2 : MVP & Internal Testing Strategy
-"For the current MVP (Minimum Viable Product) phase, we are utilizing the Firebase Sandbox environment with a dedicated test number (+91 63836 86510) and OTP (123456). This allows our team and early stakeholders to test the end-to-end rider onboarding and parametric claim triggers instantly, bypassing regional SMS provider latencies and current Indian SMS carrier restrictions.
+Phase 2 : MVP & Internal Testing Strategy
+"For the current MVP (Minimum Viable Product) phase, we are utilizing the Firebase Sandbox environment 
+with a dedicated test number (+91 63836 86510) and OTP (123456). This allows our team and early stakeholders 
+to test the end-to-end rider onboarding and parametric claim triggers instantly, bypassing regional SMS 
+provider latencies and current Indian SMS carrier restrictions.
 
-In the upcoming Phase 3 (Public Beta), we will upgrade the GigShield infrastructure to the Google Cloud Blaze Plan. This will activate global SMS gateways, enabling real-time, real-world OTP verification for every Indian mobile network and providing a seamless, automated login experience for all gig economy partners nationwide."
+In the upcoming Phase 3 (Public Beta), we will upgrade the GigShield infrastructure to the Google Cloud Blaze Plan. 
+This will activate global SMS gateways, enabling real-time, real-world OTP verification for every Indian mobile 
+network and providing a seamless, automated login experience for all gig economy partners nationwide."
 
 Why we are using this "Control Model" for now:
-Controlled Environment: It prevents accidental billing during the high-frequency development and testing cycles.
-Zero Latency: Real SMS can sometimes be delayed by 30-60 seconds due to carrier congestion. These test numbers provide an instant login every single time, which is better for a smooth demo.
-Security: It ensures that only authorized testers with the specific "Working Model" credentials can access the internal platform during development.
+
+1. Controlled Environment: It prevents accidental billing during the high-frequency development and testing cycles.
+
+2. Zero Latency: Real SMS can sometimes be delayed by 30-60 seconds due to carrier congestion. These test 
+numbers provide an instant login every single time, which is better for a smooth demo.
+
+3. Security: It ensures that only authorized testers with the specific "Working Model" credentials can 
+access the internal platform during development.

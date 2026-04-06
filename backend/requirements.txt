@@ -18,3 +18,4 @@ razorpay==1.4.1
 python-multipart==0.0.20
 twilio==9.3.2
 firebase-admin==6.4.0
+resend==2.27.0

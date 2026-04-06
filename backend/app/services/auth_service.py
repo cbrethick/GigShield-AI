@@ -4,6 +4,7 @@ from passlib.context import CryptContext
 import os
 import random
 import string
+import resend
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,6 +34,38 @@ def verify_token(token: str):
     except JWTError:
         return None
 
+# Resend Setup for Email OTP
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+
+def send_email_otp(email: str, otp: str) -> bool:
+    """Sends an OTP via Resend email service."""
+    if not RESEND_API_KEY:
+        print(f"[MOCK EMAIL] To: {email} | OTP: {otp}")
+        return True
+
+    try:
+        resend.emails.send({
+            "from": "GigShield <onboarding@resend.dev>",
+            "to": email,
+            "subject": f"{otp} is your GigShield verification code",
+            "html": f"""
+                <div style='font-family: sans-serif; padding: 20px; color: #333;'>
+                    <h2>Welcome to GigShield</h2>
+                    <p>Your verification code is:</p>
+                    <h1 style='color: #007bff; letter-spacing: 5px;'>{otp}</h1>
+                    <p>This code will expire in 5 minutes.</p>
+                    <hr />
+                    <p style='font-size: 12px; color: #666;'>If you didn't request this, please ignore this email.</p>
+                </div>
+            """
+        })
+        return True
+    except Exception as e:
+        print(f"[RESEND] Error: {e}")
+        return False
+
 # Firebase Admin Setup
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
@@ -59,16 +92,19 @@ except Exception as e:
     print(f"[FIREBASE] Init error: {e}")
 
 def verify_firebase_token(id_token: str):
-    """Verifies a Firebase ID token and returns the phone number."""
+    """Verifies a Firebase ID token and returns identity info."""
     if not id_token or id_token == "dummy_token":
-        return "+919876500001" # Demo override
+        return {"phone": "+919876500001", "email": "demo@gigshield.ai"} # Demo override
 
     try:
         decoded_token = firebase_auth.verify_id_token(id_token)
         phone = decoded_token.get("phone_number")
+        email = decoded_token.get("email")
+        
         if phone:
             phone = phone.replace(" ", "")
-        return phone
+            
+        return {"phone": phone, "email": email}
     except Exception as e:
         print(f"[FIREBASE] Token verification failed: {e}")
         return None

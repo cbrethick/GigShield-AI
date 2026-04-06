@@ -25,9 +25,20 @@ export default function OnboardingPage() {
   const [error,   setError]   = useState('');
 
   useEffect(() => {
+    if (!router.isReady) return;
     if (!isLoggedIn()) { router.replace('/'); return; }
+    
+    // Pre-fill from query params (e.g. from Google Login)
+    const { name, email, phone } = router.query;
+    if (name || email) {
+      setForm(f => ({
+        ...f,
+        name: name || f.name,
+      }));
+    }
+
     getZones().then(r => setZones(r.data)).catch(() => {});
-  }, []);
+  }, [router.isReady, router.query]);
 
   async function handleProfileSubmit() {
     setLoading(true); setError('');

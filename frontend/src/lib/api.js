@@ -52,11 +52,14 @@ export const getInsurerDashboard = () => api.get('/analytics/insurer');
 export const getLiveStats        = () => api.get('/analytics/live');
 
 // ── Auth ──
-export const sendOTP   = (phone) => api.post('/auth/send-otp', { phone });
-export const verifyOTP = (phone, firebase_token) => api.post('/auth/verify-otp', { phone, firebase_token });
+export const sendOTP      = (phone) => api.post('/auth/send-otp', { phone });
+export const sendEmailOTP = (email) => api.post('/auth/send-email-otp', { email });
+
+// Generic verify function to handle phone, email, and firebase tokens
+export const verifyOTP = (data) => api.post('/auth/verify-otp', data);
 
 // ── Auth helpers ──
-export const login      = (phone, firebase_token) => api.post('/auth/verify-otp', { phone, firebase_token }).then(res => res.data);
+export const login      = (data) => api.post('/auth/verify-otp', data).then(res => res.data);
 export const register   = (data) => api.post('/auth/onboarding', data).then(res => res.data);
 export const setToken   = (token) => { if (typeof window !== 'undefined') localStorage.setItem('gs_token', token); };
 export const saveToken  = (token) => { if (typeof window !== 'undefined') localStorage.setItem('gs_token', token); };

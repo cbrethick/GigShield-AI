@@ -45,3 +45,8 @@ Thumbs.db
 
 # Vercel
 .vercel/
+
+# Secrets
+*firebase-key.json
+.env*
+migrate.py

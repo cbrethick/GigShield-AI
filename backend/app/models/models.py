@@ -34,6 +34,7 @@ class Rider(Base):
 
     id = Column(String, primary_key=True, default=gen_uuid)
     phone = Column(String(15), unique=True, nullable=False, index=True)
+    email = Column(String(100), unique=True, nullable=True, index=True)
     name = Column(String(100), nullable=True)
     platform = Column(String(20), nullable=False)  # ZOMATO / SWIGGY
     zone = Column(String(100), nullable=False)
@@ -124,7 +125,8 @@ class OTPStore(Base):
     __tablename__ = "otp_store"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    phone = Column(String(15), nullable=False, index=True)
+    phone = Column(String(15), nullable=True, index=True)
+    email = Column(String(100), nullable=True, index=True)
     otp = Column(String(6), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False)

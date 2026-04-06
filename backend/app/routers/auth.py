@@ -4,9 +4,9 @@ from pydantic import BaseModel
 from typing import Optional, Union
 from datetime import datetime, timedelta
 from app.db.database import get_db
-from app.models.models import Rider, OTPStore
+from app.models.models import Rider, OTPStore, gen_uuid
 from app.services.auth_service import (
-    generate_otp, create_access_token, send_otp_sms, verify_firebase_token
+    generate_otp, create_access_token, send_otp_sms, verify_firebase_token, send_email_otp
 )
 from app.db.redis_client import get_redis
 
@@ -17,6 +17,7 @@ class SendOTPRequest(BaseModel):
 
 class VerifyOTPRequest(BaseModel):
     phone: Optional[str] = None
+    email: Optional[str] = None
     otp: Optional[str] = None
     firebase_token: Optional[str] = None
 
@@ -48,41 +49,111 @@ def send_otp(req: SendOTPRequest, db: Session = Depends(get_db)):
     db.commit()
 
     send_otp_sms(phone, otp)
+    return {"message": "OTP sent", "phone": phone, "demo_otp": otp}
 
-    return {"message": "OTP sent", "phone": phone, "demo_otp": otp}  # remove demo_otp in prod
+class SendEmailOTPRequest(BaseModel):
+    email: str
+
+@router.post("/send-email-otp")
+def send_email_otp_endpoint(req: SendEmailOTPRequest, db: Session = Depends(get_db)):
+    email = req.email.strip().lower()
+    otp = generate_otp()
+
+    # Store OTP in Redis (expires in 5 min)
+    redis = get_redis()
+    redis.setex(f"otp:{email}", 300, otp)
+
+    # Also store in DB for audit
+    otp_record = OTPStore(
+        email=email,
+        otp=otp,
+        expires_at=datetime.utcnow() + timedelta(minutes=5),
+    )
+    db.add(otp_record)
+    db.commit()
+
+    send_email_otp(email, otp)
+
+    return {"message": "OTP sent to email", "email": email, "demo_otp": otp}
 
 @router.post("/verify-otp", response_model=TokenResponse)
 async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     """
-    Verifies the Firebase ID Token and issues a GigShield JWT.
+    Verifies the OTP (SMS/Email) or Firebase ID Token and issues a GigShield JWT.
     """
-    # 1. Verify with Firebase
-    phone = verify_firebase_token(request.firebase_token)
-    
-    if not phone:
-        print(f"[AUTH] Firebase token verification failed for token: {request.firebase_token[:10]}...")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Firebase identity verification failed"
-        )
-    
-    # Normalize phone for DB lookup
-    phone = phone.replace(" ", "")
+    phone = None
+    email = None
 
-    redis = get_redis()
-    redis.delete(f"otp:{phone}")
+    # 1. Verify with Firebase (Phone or Google)
+    if request.firebase_token:
+        identity = verify_firebase_token(request.firebase_token)
+        if not identity:
+            raise HTTPException(status_code=401, detail="Firebase identity verification failed")
+        phone = identity.get("phone")
+        email = identity.get("email")
+    
+    # 2. Verify with direct Email OTP
+    elif request.email and request.otp:
+        email = request.email.strip().lower()
+        redis = get_redis()
+        stored_otp = redis.get(f"otp:{email}")
+        if not stored_otp or stored_otp.decode() != request.otp:
+            # Fallback to DB check
+            otp_record = db.query(OTPStore).filter(
+                OTPStore.email == email, 
+                OTPStore.otp == request.otp,
+                OTPStore.expires_at > datetime.utcnow(),
+                OTPStore.used == False
+            ).first()
+            if not otp_record:
+                raise HTTPException(status_code=401, detail="Invalid or expired email OTP")
+            otp_record.used = True
+            db.commit()
+        redis.delete(f"otp:{email}")
+
+    # 3. Verify with direct SMS OTP (Legacy support)
+    elif request.phone and request.otp:
+        phone = request.phone.strip()
+        redis = get_redis()
+        stored_otp = redis.get(f"otp:{phone}")
+        if not stored_otp or stored_otp.decode() != request.otp:
+            raise HTTPException(status_code=401, detail="Invalid or expired SMS OTP")
+        redis.delete(f"otp:{phone}")
+
+    if not phone and not email:
+        raise HTTPException(status_code=400, detail="Missing verification credentials")
 
     # Get or create rider
-    rider = db.query(Rider).filter(Rider.phone == phone).first()
+    query = db.query(Rider)
+    if phone:
+        rider = query.filter(Rider.phone == phone).first()
+    else:
+        rider = query.filter(Rider.email == email).first()
+    
     is_new = rider is None
 
     if is_new:
-        rider = Rider(phone=phone, platform="ZOMATO", zone="", avg_daily_hours=8.0, avg_daily_earnings=800.0)
+        rider = Rider(
+            phone=phone if phone else f"EMAIL_{gen_uuid()[:8]}", # Dummy phone if only email
+            email=email,
+            platform="ZOMATO", 
+            zone="", 
+            avg_daily_hours=8.0, 
+            avg_daily_earnings=800.0
+        )
         db.add(rider)
         db.commit()
         db.refresh(rider)
+    elif email and not rider.email:
+        # Link email to existing phone-based account
+        rider.email = email
+        db.commit()
+    elif phone and not rider.phone:
+        # Link phone to existing email-based account
+        rider.phone = phone
+        db.commit()
 
-    token = create_access_token({"sub": rider.id, "phone": phone})
+    token = create_access_token({"sub": rider.id, "phone": rider.phone, "email": rider.email})
 
     return {
         "access_token": token,

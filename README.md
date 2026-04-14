@@ -57,7 +57,34 @@ GigShield is an AI-powered parametric insurance platform that:
 
 ## 3. System Architecture
 
-![Workflow Diagram](images/gigshield_platform_architecture.svg)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        GIGSHIELD PLATFORM                           │
+├──────────────┬──────────────────┬──────────────────┬───────────────-┤
+│  THE WATCHMAN│   THE ENGINE     │  THE PARTNER     │  THE VAULT     │
+│              │                  │                  │                │
+│  Node.js     │  FastAPI         │  Rider PWA       │  Insurer       │
+│  Trigger     │  Backend         │  Next.js         │  Portal        │
+│  Service     │  (Port 8001)     │  (Port 3000)     │  Next.js       │
+│  (Port 3001) │                  │                  │  (Port 3002)   │ 
+│              │  ┌────────────┐  │                  │                │
+│  • IMD poll  │  │ XGBoost    │  │  • Firebase OTP  │  • Live alerts │
+│  • OWM poll  │  │ Premium    │  │  • Dashboard     │  • Batch appr  │
+│  • AQI check │  │ Model .pkl │  │  • Notif centre  │  • Fraud DNA   │
+│  • Threshold │  ├────────────┤  │  • Payout hist   │  • Prophet     │
+│    breach    │  │ Isolation  │  │  • Offline PWA   │    forecast    │
+│  • Fire event│  │ Forest.pkl │  │                  │  • Heatmap     │
+│              │  └────────────┘  │                  │                │
+├──────────────┴──────────────────┴──────────────────┴───────────────-┤
+│                          DATA LAYER                                 │
+│  PostgreSQL (Ledger)  ·  Redis (Zone Watchlists + B2B Balance)      │
+├─────────────────────────────────────────────────────────────────────┤
+│                        DEPLOYMENT                                   │
+│  Railway (DB+Redis) → Render (Backend+Trigger) → Vercel (Frontends) │
+│  Firebase Auth (OTP)  ·  Razorpay Sandbox (UPI Payouts)             │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 

@@ -109,7 +109,7 @@ GigShield is an AI-powered parametric insurance platform that:
 
 ### End-to-End Application Workflow
 
-![Workflow Diagram](images/gigshield_adversarial_defense_engine.svg)
+![Workflow Diagram](images/images/gigshield_platform_flow.svg)
 
 ---
 

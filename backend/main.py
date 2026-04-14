@@ -24,20 +24,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Security: Specify exact domains for CORS
-ALLOWED_ORIGINS = [
-    os.getenv("FRONTEND_URL", "http://localhost:3000"),
-    os.getenv("INSURER_URL", "http://localhost:3002"),
-    "https://gigshield.vercel.app",
-    "https://gigshield-insurer-portal.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:3002"
-]
-
+# Deployment Security: Permissive CORS for Bearer Tokens
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

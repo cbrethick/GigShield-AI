@@ -85,11 +85,11 @@ export default function PolicyPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
                   <p style={{ fontSize: 12, opacity: 0.7, color: 'rgba(255,255,255,0.8)' }}>Weekly premium</p>
-                  <p style={{ fontSize: 28, fontWeight: 800 }}>₹{active.weekly_premium_inr}</p>
+                  <p style={{ fontSize: 28, fontWeight: 800 }} suppressHydrationWarning>₹{(active.weekly_premium_inr || 0).toLocaleString('en-IN')}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ fontSize: 12, opacity: 0.7, color: 'rgba(255,255,255,0.8)' }}>Max payout</p>
-                  <p style={{ fontSize: 28, fontWeight: 800 }}>₹{active.max_payout_inr}</p>
+                  <p style={{ fontSize: 28, fontWeight: 800 }} suppressHydrationWarning>₹{(active.max_payout_inr || 0).toLocaleString('en-IN')}</p>
                 </div>
               </div>
               <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', backdropFilter: 'blur(4px)' }}>
@@ -145,10 +145,10 @@ export default function PolicyPage() {
                       <p style={{ color: 'var(--green-l)', fontWeight: 800, fontSize: 14, marginBottom: 4 }}>
                         Trigger fired successfully! ✅
                       </p>
-                      <p style={{ color: 'var(--green)', fontSize: 13 }}>
+                      <p style={{ color: 'var(--green)', fontSize: 13 }} suppressHydrationWarning>
                         Claims created: {simResult.result?.claims_created ?? 0} |
                         Approved: {simResult.result?.approved ?? 0} |
-                        Payout: ₹{simResult.result?.total_payout_inr ?? 0}
+                        Payout: ₹{(simResult.result?.total_payout_inr ?? 0).toLocaleString('en-IN')}
                       </p>
                       <p style={{ color: 'var(--text2)', fontSize: 12, marginTop: 6 }}>Check Claims tab to see your process →</p>
                     </>

@@ -42,7 +42,10 @@ if RESEND_API_KEY:
 def send_email_otp(email: str, otp: str) -> bool:
     """Sends an OTP via Resend email service."""
     if not RESEND_API_KEY:
-        print(f"[MOCK EMAIL] To: {email} | OTP: {otp}")
+        print("\n" + "="*50)
+        print(f"DEBUG EMAIL OTP: {otp}")
+        print(f"TO: {email}")
+        print("="*50 + "\n")
         return True
 
     try:
@@ -61,9 +64,13 @@ def send_email_otp(email: str, otp: str) -> bool:
                 </div>
             """
         })
+        print(f"[RESEND] Email sent to {email}")
         return True
     except Exception as e:
         print(f"[RESEND] Error: {e}")
+        print("\n" + "!"*50)
+        print(f"RESEND FAILED! USE THIS OTP FOR TESTING: {otp}")
+        print("!"*50 + "\n")
         return False
 
 # Firebase Admin Setup

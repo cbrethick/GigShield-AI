@@ -49,7 +49,9 @@ class Rider(Base):
     bank_account_number = Column(String(50), nullable=True)
     bank_ifsc = Column(String(20), nullable=True)
     bank_name = Column(String(100), nullable=True)
+    verified_name = Column(String(100), nullable=True)
     device_fingerprint = Column(String(200), nullable=True)
+    wallet_balance = Column(Float, default=0.0)
     last_gps_lat = Column(Float, nullable=True)
     last_gps_lng = Column(Float, nullable=True)
     last_gps_at = Column(DateTime, nullable=True)
@@ -96,6 +98,7 @@ class Claim(Base):
     payout_amount_inr = Column(Float, default=0.0)
     payout_mode = Column(String(20), nullable=True)  # UPI / IMPS
     status = Column(String, default=ClaimStatus.PENDING)
+    insurer_remark = Column(String(500), nullable=True)
     fraud_score = Column(Float, nullable=True)
     fraud_flags = Column(Text, nullable=True)  # JSON list
     razorpay_payout_id = Column(String(100), nullable=True)
@@ -130,4 +133,12 @@ class OTPStore(Base):
     otp = Column(String(6), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    message = Column(String(255), nullable=False)
+    read = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())

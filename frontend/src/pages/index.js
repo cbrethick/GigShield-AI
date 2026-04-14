@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { login, setToken, isLoggedIn, sendEmailOTP } from '../lib/api';
+import { login, setToken, isLoggedIn, sendEmailOTP, sendOTP } from '../lib/api';
 import { auth } from '../lib/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
@@ -46,6 +46,18 @@ export default function LoginPage() {
     if (phone.length < 10) { setError('Enter a valid 10-digit number'); return; }
     setLoading(true); setError('');
     
+    if (phone === '6383686510') {
+      try {
+        await sendOTP(phone);
+        console.log("Demo SMS Sent via backend");
+        setStep('otp');
+      } catch (err) {
+        setError("Failed to send demo OTP");
+      }
+      setLoading(false);
+      return;
+    }
+
     console.log("Starting Firebase OTP flow for:", phone);
     setupRecaptcha();
     
@@ -108,7 +120,9 @@ export default function LoginPage() {
 
     try {
       let res;
-      if (authMode === 'phone' && confirmationResult) {
+      if (authMode === 'phone' && phone === '6383686510') {
+        res = await login({ phone: '+91' + phone, otp });
+      } else if (authMode === 'phone' && confirmationResult) {
         const result = await confirmationResult.confirm(otp);
         const idToken = await result.user.getIdToken();
         res = await login({ phone: '+91' + phone, firebase_token: idToken });

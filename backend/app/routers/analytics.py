@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from datetime import datetime, timedelta
 import json
+import httpx
 from app.db.database import get_db
 from app.models.models import Claim, Policy, Rider, TriggerEvent, ClaimStatus, PolicyStatus
 
@@ -86,6 +87,31 @@ def insurer_dashboard(db: Session = Depends(get_db)):
             "payout_inr": round(payout, 2),
         })
 
+    # ── Predictive Analytics (Rule-based simulation) ──
+    predictions = []
+    high_risk_zones = db.query(
+        Claim.zone,
+        func.count(Claim.id).label("cnt")
+    ).filter(Claim.created_at >= (now - timedelta(days=14))).group_by(Claim.zone).all()
+
+    for z in high_risk_zones:
+        # Simple prediction: If claims increased > 20% compared to previous week, forecast high risk
+        prev_wk_cnt = db.query(func.count(Claim.id)).filter(
+            Claim.zone == z.zone,
+            Claim.created_at >= (now - timedelta(days=14)),
+            Claim.created_at < week_start
+        ).scalar() or 0
+        
+        risk_trend = "INCREASING" if z.cnt > (prev_wk_cnt * 1.2) else "STABLE"
+        forecasted_claims = int(z.cnt * (1.1 if risk_trend == "INCREASING" else 0.9))
+        
+        predictions.append({
+            "zone": z.zone,
+            "risk_trend": risk_trend,
+            "predicted_claims_next_week": max(forecasted_claims, 1),
+            "confidence": 0.85 if risk_trend == "INCREASING" else 0.7
+        })
+
     return {
         "summary": {
             "active_policies": active_policies,
@@ -103,6 +129,7 @@ def insurer_dashboard(db: Session = Depends(get_db)):
             {"zone": z.zone, "claims": z.claim_count, "payout_inr": round(z.total_payout or 0, 2)}
             for z in zone_claims
         ],
+        "predictions": predictions,
         "recent_claims": [
             {
                 "id": c.id,
@@ -145,3 +172,34 @@ def live_stats(db: Session = Depends(get_db)):
         "amount_paid_last_hour_inr": round(amount_hour, 2),
         "timestamp": now.isoformat(),
     }
+
+from app.routers.deps import get_current_rider
+
+@router.get("/weather")
+async def get_weather(rider: Rider = Depends(get_current_rider)):
+    """Fetches real weather from Open-Meteo API."""
+    lat = rider.last_gps_lat or 13.0827
+    lng = rider.last_gps_lng or 80.2707
+    zone = rider.zone if rider and rider.zone else "Chennai"
+
+    # Default fallback
+    weather_data = {
+        "zone": zone,
+        "temp": 28.5,
+        "rain_mm": 0.0,
+        "aqi": 120
+    }
+
+    try:
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=temperature_2m,precipitation"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=5.0)
+            if response.status_code == 200:
+                data = response.json()
+                current = data.get("current", {})
+                weather_data["temp"] = current.get("temperature_2m", 28.5)
+                weather_data["rain_mm"] = current.get("precipitation", 0.0)
+    except Exception as e:
+        print(f"Open-Meteo fetch failed: {e}")
+
+    return weather_data

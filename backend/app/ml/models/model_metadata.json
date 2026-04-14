@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "trained_at": "2026-04-14T08:25:19.749803",
+  "training_rows": 15000,
+  "premium_model": {
+    "type": "XGBRegressor",
+    "features": [
+      "zone_flood_score",
+      "avg_weekly_aqi",
+      "disruption_freq_90d",
+      "avg_daily_hours",
+      "avg_daily_earnings",
+      "avg_rider_rating",
+      "red_alert_days",
+      "week_of_year",
+      "month",
+      "disruption_days"
+    ],
+    "target": "weekly_premium_inr",
+    "metrics": {
+      "mae": 2.454,
+      "r2": 0.6937,
+      "cv_mae": 2.442
+    },
+    "output_range_inr": {
+      "min": 35,
+      "max": 80
+    }
+  },
+  "fraud_model": {
+    "type": "IsolationForest",
+    "contamination": 0.05,
+    "score_threshold_auto_approve": 0.25,
+    "score_threshold_grace_queue": 0.5,
+    "score_threshold_manual_review": 0.75
+  },
+  "data_sources": [
+    "IMD 0.25\u00b0 Daily Gridded Rainfall (synthetic calibrated)",
+    "CPCB City AQI (synthetic calibrated)",
+    "Kaggle Food Delivery India 45k (synthetic calibrated)"
+  ],
+  "zones": [
+    "T. Nagar",
+    "Anna Nagar",
+    "Velachery",
+    "Tambaram",
+    "Adyar",
+    "Porur",
+    "Sholinganallur",
+    "Perambur",
+    "Ambattur"
+  ]
+}

@@ -1,15 +1,8 @@
 const axios = require("axios");
 const { ZONES, THRESHOLDS } = require("../config/zones");
 
-// CPCB AQI API (public, no key needed for basic data)
-const CPCB_BASE = "https://api.data.gov.in/resource/3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69";
-
-// Chennai station IDs
-const CHENNAI_STATIONS = {
-  "T. Nagar":   "Alandur Bus Depot, Chennai - CPCB",
-  "Adyar":      "Manali, Chennai - CPCB",
-  "Velachery":  "Velachery - CPCB",
-};
+const API_KEY = process.env.OPENWEATHER_API_KEY;
+const BASE_URL = "https://api.openweathermap.org/data/2.5/air_pollution";
 
 function getMockAQI(zone) {
   const base = { "T. Nagar": 145, "Adyar": 130, "Velachery": 155 };
@@ -23,11 +16,39 @@ function getMockAQI(zone) {
   };
 }
 
+// Map OpenWeather AQI index (1-5) to a comparable 0-500 scale for consistency with existing thresholds
+function mapToAQIScale(owAQI) {
+  const map = {
+    1: 45,   // Good
+    2: 95,   // Fair
+    3: 180,  // Moderate
+    4: 280,  // Poor
+    5: 450,  // Very Poor (Severe)
+  };
+  return map[owAQI] || 100;
+}
+
 async function checkAQIForZone(zone) {
-  try {
-    // In production: hit CPCB API with proper credentials
-    // For now: return mock data
+  if (!API_KEY || API_KEY === "your_openweathermap_key_here") {
     return getMockAQI(zone);
+  }
+
+  try {
+    const res = await axios.get(BASE_URL, {
+      params: { lat: zone.lat, lon: zone.lon, appid: API_KEY },
+      timeout: 8000,
+    });
+    
+    const owAQI = res.data.list[0]?.main?.aqi ?? 3;
+    const mappedAQI = mapToAQIScale(owAQI);
+
+    return {
+      zone: zone.name,
+      aqi: mappedAQI,
+      raw_index: owAQI,
+      category: owAQI === 5 ? "Severe" : owAQI === 4 ? "Very Poor" : owAQI === 3 ? "Poor" : "Moderate",
+      mocked: false,
+    };
   } catch (err) {
     console.error(`[AQI] Error fetching ${zone.name}:`, err.message);
     return getMockAQI(zone);
@@ -36,6 +57,7 @@ async function checkAQIForZone(zone) {
 
 async function checkAllZonesAQI() {
   const results = await Promise.all(ZONES.map(checkAQIForZone));
+  // Severe trigger if mapped AQI >= 400 (or raw index == 5)
   const severeAQI = results.filter(r => r.aqi >= THRESHOLDS.SEVERE_AQI.value);
   return { all: results, severe: severeAQI };
 }

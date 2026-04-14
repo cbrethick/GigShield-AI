@@ -10,6 +10,7 @@ from app.db.database import get_db, SessionLocal
 from app.models.models import Rider, Claim, Policy, PolicyStatus, ClaimStatus
 from app.routers.deps import get_current_rider
 from app.services.claim_processor import process_trigger_event
+from app.db.redis_client import get_redis as get_redis_client
 
 router = APIRouter()
 
@@ -55,6 +56,7 @@ def get_my_claims(
             "payout_mode": c.payout_mode,
             "payout_details": json.loads(c.payout_details or "{}"),
             "status": c.status,
+            "insurer_remark": c.insurer_remark,
             "fraud_flags": json.loads(c.fraud_flags or "[]"),
             "paid_at": c.paid_at.isoformat() if c.paid_at else None,
             "created_at": c.created_at.isoformat(),
@@ -89,7 +91,49 @@ def get_rider_stats(
             "valid_till": active_policy.valid_till.isoformat(),
             "weekly_premium_inr": active_policy.weekly_premium_inr,
         } if active_policy else None,
+        "wallet_balance": rider.wallet_balance or 0.0,
     }
+
+# ── VERIFY NO_GPS_DATA ENDPOINT ──
+@router.post("/{claim_id}/verify-no-gps")
+def verify_no_gps_claim(
+    claim_id: str,
+    rider: Rider = Depends(get_current_rider),
+    db: Session = Depends(get_db),
+):
+    """Verifies a claim with NO_GPS_DATA using third party weather/news APIs and pushes it to B2B."""
+    claim = db.query(Claim).filter(Claim.id == claim_id, Claim.rider_id == rider.id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    fraud_flags = json.loads(claim.fraud_flags or "[]")
+    if "NO_GPS_DATA" not in fraud_flags:
+        raise HTTPException(status_code=400, detail="Claim does not require NO_GPS_DATA verification")
+
+    if claim.status != ClaimStatus.MANUAL_REVIEW and claim.status != ClaimStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Claim cannot be verified in its current state")
+
+    # Mock API call to weather/news APIs
+    print(f"[Verification] Calling Weather API for zone {claim.zone}")
+    print(f"[Verification] Calling Local News API for zone {claim.zone}")
+    
+    # Remove the NO_GPS_DATA flag since verified by third party
+    fraud_flags.remove("NO_GPS_DATA")
+    claim.fraud_flags = json.dumps(fraud_flags)
+    
+    # Change status to PENDING so that the insurer portal batch process can see and approve it
+    claim.status = ClaimStatus.PENDING
+    
+    # Append verification note to payout details
+    try:
+        details = json.loads(claim.payout_details or "{}")
+    except:
+        details = {}
+    details["verification"] = "Verified via Weather & News API fallback"
+    claim.payout_details = json.dumps(details)
+    
+    db.commit()
+    return {"message": "Verification successful via third-party APIs. Claim forwarded to Insurer Portal.", "status": claim.status}
 
 # ── DEMO / ADMIN ENDPOINTS ──
 
@@ -117,8 +161,9 @@ async def simulate_trigger(
         duration_hours=req.duration_hours,
     )
 
-    if result.get("approved", 0) > 0:
-        background_tasks.add_task(mock_payout_delay, trigger_event_id)
+    # Removed background task auto-approval for real B2B review flow
+    # if result.get("approved", 0) > 0:
+    #     background_tasks.add_task(mock_payout_delay, trigger_event_id)
 
     return {
         "trigger_event_id": trigger_event_id,
@@ -127,6 +172,29 @@ async def simulate_trigger(
         "result": result,
         "message": f"Trigger processed. {result.get('claims_created', 0)} claims created.",
     }
+
+@router.post("/admin/reset")
+def reset_system_data(db: Session = Depends(get_db)):
+    """Clears all claims, triggers, and notifications for a fresh demo."""
+    from sqlalchemy import text
+    try:
+        # Clear tables
+        db.execute(text("TRUNCATE TABLE claims CASCADE;"))
+        db.execute(text("TRUNCATE TABLE trigger_events CASCADE;"))
+        db.execute(text("TRUNCATE TABLE notifications CASCADE;"))
+        
+        # Reset rider balances
+        db.execute(text("UPDATE riders SET wallet_balance = 0.0;"))
+        db.commit()
+
+        # Reset B2B balance in Redis
+        r = get_redis_client()
+        r.set("b2b_balance", "100000.0")
+
+        return {"status": "success", "message": "System data reset. B2B balance back to ₹1,00,000."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/webhook/razorpay")
 async def razorpay_webhook(

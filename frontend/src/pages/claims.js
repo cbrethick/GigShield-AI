@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { getMyClaims, isLoggedIn } from '../lib/api';
+import { getMyClaims, isLoggedIn, verifyNoGpsClaim } from '../lib/api';
 import NavBar from '../components/NavBar';
 
 const STATUS_STYLE = {
-  PAID:          { bg:'rgba(29,158,117,0.15)',  color:'#25c493', label:'Paid ✓' },
-  APPROVED:      { bg:'rgba(29,158,117,0.15)',  color:'#25c493', label:'Approved ✓' },
+  PAID:          { bg: 'rgba(29,158,117,0.15)', color: '#25c493', label: 'Accepted ✓' },
+  APPROVED:      { bg: 'rgba(29,158,117,0.15)', color: '#25c493', label: 'Accepted ✓' },
   MANUAL_REVIEW: { bg:'rgba(239,159,39,0.15)',  color:'#EF9F27', label:'Under review' },
   PENDING:       { bg:'rgba(239,159,39,0.15)',  color:'#EF9F27', label:'Pending' },
   FRAUD_CHECK:   { bg:'rgba(59,130,246,0.15)',  color:'#60a5fa', label:'Verifying' },
-  REJECTED:      { bg:'rgba(226,75,74,0.15)',   color:'#E24B4A', label:'Rejected' },
+  REJECTED:      { bg: 'rgba(226,75,74,0.15)',   color: '#E24B4A', label: 'Rejected' },
+  PAYOUT_FAILED: { bg: 'rgba(29,158,117,0.15)', color: '#25c493', label: 'Accepted ✓' },
 };
 
 const TRIGGER_LABELS = {
@@ -34,14 +35,28 @@ export default function ClaimsPage() {
   const [claims, setClaims]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (!isLoggedIn()) { router.replace('/'); return; }
     getMyClaims()
       .then(r => setClaims(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const handleVerifyNoGps = async (claimId) => {
+    try {
+      await verifyNoGpsClaim(claimId);
+      // Refresh claims after success
+      const r = await getMyClaims();
+      setClaims(r.data);
+      alert("Verification successful. Claim forwarded to Insurer Portal.");
+    } catch (e) {
+      alert(e.response?.data?.detail || "Verification failed");
+    }
+  };
 
   return (
     <div style={{ paddingBottom:90 }}>
@@ -85,21 +100,23 @@ export default function ClaimsPage() {
           return (
             <div key={c.id} className="card" style={{ marginBottom:14, cursor:'pointer', border: isOpen ? '1px solid var(--green)' : '1px solid var(--border)' }}
               onClick={()=>setSelected(isOpen ? null : c.id)}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-                  <span style={{ fontSize:32 }}>{TRIGGER_ICONS[c.trigger_type]||'⚡'}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <span style={{ fontSize: 32 }}>{TRIGGER_ICONS[c.trigger_type] || '⚡'}</span>
                   <div>
-                    <p style={{ fontWeight:700, fontSize:15, marginBottom:3 }}>
-                      {TRIGGER_LABELS[c.trigger_type]||c.trigger_type}
+                    <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 3 }}>
+                      {TRIGGER_LABELS[c.trigger_type] || c.trigger_type}
                     </p>
-                    <p style={{ fontSize:12, color:'var(--text2)' }}>
-                      {c.zone} · {new Date(c.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+                    <p style={{ fontSize: 12, color: 'var(--text2)' }}>
+                      {c.zone} · {new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
-                <div style={{ textAlign:'right' }}>
-                  <p style={{ fontWeight:800, fontSize:20, color:'var(--green-l)', marginBottom:4 }}>₹{c.payout_amount_inr}</p>
-                  <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background:st.bg, color:st.color }}>{st.label}</span>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontWeight: 800, fontSize: 20, color: 'var(--green-l)', marginBottom: 4 }}>
+                    ₹{mounted && typeof c.payout_amount_inr === 'number' ? c.payout_amount_inr.toLocaleString('en-IN') : (mounted ? c.payout_amount_inr : '0')}
+                  </p>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: st.bg, color: st.color }}>{st.label}</span>
                 </div>
               </div>
 
@@ -123,8 +140,8 @@ export default function ClaimsPage() {
                     { label: `${TRIGGER_LABELS[c.trigger_type]||'Trigger'} Confirmed`, done: true, sub: `Source: Weather API | ${c.trigger_value}${c.trigger_type==='HEAVY_RAIN'?'mm':''}` },
                     { label: 'Worker Eligibility Check', done: true, sub: 'Policy Active • Zone Valid • No Duplicates' },
                     { label: 'Payout Calculated', done: true, sub: `Formula: ${payoutDetails.formula || `₹${c.payout_amount_inr} fixed`}` },
-                    { label: 'Transfer Initiated', done: c.status==='PAID' || c.status==='APPROVED', sub: c.payout_mode ? `${c.payout_mode} Transfer via Razorpay` : 'Processing payment...' },
-                    { label: 'Record Updated', done: c.status==='PAID', sub: c.status==='PAID' ? 'System logs updated • Database reconciled' : 'Waiting for confirmation' },
+                    { label: 'Transfer Initiated', done: c.status==='PAID' || c.status==='APPROVED', sub: (c.status==='PAID' || c.status==='APPROVED') ? (c.payout_mode ? `${c.payout_mode} Transfer via Razorpay` : 'Payment successfully processed') : 'Processing payment...' },
+                    { label: 'Record Updated', done: c.status==='PAID' || c.status==='APPROVED', sub: (c.status==='PAID' || c.status==='APPROVED') ? 'System logs updated • Database reconciled' : 'Waiting for confirmation' },
                   ].map((step, i) => (
                     <div key={i} style={{ display:'flex', gap:12, marginBottom:16, position:'relative' }}>
                       {/* Step Line */}
@@ -153,20 +170,54 @@ export default function ClaimsPage() {
                   </div>
 
                   {/* Payout success box */}
-                  {c.status==='PAID' && (
-                    <div style={{ background:'linear-gradient(rgba(29,158,117,0.1), rgba(29,158,117,0.05))', border:'1px solid rgba(29,158,117,0.2)', borderRadius:10, padding:'14px', marginTop:14 }}>
-                      <p style={{ fontSize:14, color:'var(--green-l)', fontWeight:800, marginBottom:4 }}>✅ PAYMENT SUCCESSFUL</p>
-                      <p style={{ fontSize:12, color:'var(--text2)', lineHeight:1.4 }}>
-                        ₹{c.payout_amount_inr} has been sent to your <strong>{c.payout_mode}</strong> account. 
+                  {c.status === 'PAID' && (
+                    <div style={{ background: 'linear-gradient(rgba(29,158,117,0.1), rgba(29,158,117,0.05))', border: '1px solid rgba(29,158,117,0.2)', borderRadius: 10, padding: '14px', marginTop: 14 }}>
+                      <p style={{ fontSize: 14, color: 'var(--green-l)', fontWeight: 800, marginBottom: 4 }}>✅ PAYMENT SUCCESSFUL</p>
+                      <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.4 }}>
+                        ₹{mounted ? (c.payout_amount_inr || 0).toLocaleString('en-IN') : '0'} has been sent to your <strong>{c.payout_mode}</strong> account.
                         Funds should reflect in your balance within minutes.
                       </p>
-                      <p style={{ fontSize:10, color:'var(--text3)', marginTop:8, textTransform:'uppercase' }}>Ref: {c.claim_number}</p>
+                      <p style={{ fontSize: 10, color: 'var(--text3)', marginTop: 8, textTransform: 'uppercase' }}>Ref: {c.claim_number}</p>
+                    </div>
+                  )}
+
+                  {/* Rejection box */}
+                  {c.status==='REJECTED' && (
+                    <div style={{ background:'linear-gradient(rgba(226,75,74,0.1), rgba(226,75,74,0.05))', border:'1px solid rgba(226,75,74,0.2)', borderRadius:10, padding:'14px', marginTop:14 }}>
+                      <p style={{ fontSize:14, color:'#E24B4A', fontWeight:800, marginBottom:4 }}>❌ CLAIM REJECTED</p>
+                      <p style={{ fontSize:12, color:'var(--text2)', lineHeight:1.4 }}>
+                        Your claim was reviewed by our insurance partner and rejected.
+                      </p>
+                      {c.insurer_remark && (
+                        <div style={{ fontSize:12, color:'#E24B4A', marginTop: 8, background: 'rgba(226,75,74,0.08)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(226,75,74,0.1)' }}>
+                          <p style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: 10, marginBottom: 4, letterSpacing: '0.05em' }}>Insurer Feedback:</p>
+                          <p style={{ lineHeight: 1.4 }}>{c.insurer_remark}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Payout Issue box */}
+                  {c.status==='PAYOUT_FAILED' && (
+                    <div style={{ background:'rgba(239,159,39,0.1)', border:'1px solid rgba(239,159,39,0.2)', borderRadius:10, padding:'14px', marginTop:14 }}>
+                      <p style={{ fontSize:14, color:'var(--amber)', fontWeight:800, marginBottom:4 }}>⚠️ PAYOUT ENCOUNTERED AN ISSUE</p>
+                      <p style={{ fontSize:12, color:'var(--text2)', lineHeight:1.4 }}>
+                        We hit a technical snag while processing your transfer. 
+                        <strong> Don't worry, your payout is safe.</strong> Our team is manually reconciling this.
+                      </p>
                     </div>
                   )}
 
                   {fraudFlags.length>0 && (
                     <div style={{ background:'rgba(239,159,39,0.1)', border:'1px solid rgba(239,159,39,0.2)', borderRadius:8, padding:'8px 12px', marginTop:8 }}>
                       <p style={{ fontSize:12, color:'var(--amber)', fontWeight:600 }}>⚠️ Security Note: {fraudFlags.join(', ')}</p>
+                      {fraudFlags.includes('NO_GPS_DATA') && (c.status === 'MANUAL_REVIEW' || c.status === 'PENDING') && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleVerifyNoGps(c.id); }}
+                          style={{ marginTop: '8px', padding: '6px 12px', background: '#EF9F27', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                          Verify with Weather/News APIs
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

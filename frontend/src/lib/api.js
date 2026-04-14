@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -16,13 +16,18 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Normalise Pydantic v2 validation errors (array of {msg,loc,type}) → string
+// Normalise Pydantic v2 validation errors and handle network errors
 api.interceptors.response.use(
   res => res,
   err => {
+    if (!err.response) {
+      // Network error or timeout
+      console.error("Network Error: Could not connect to API at", API_URL);
+      err.message = `Network Error: Backend unreachable at ${API_URL}. Ensure uvicorn is running on port 8001.`;
+      return Promise.reject(err);
+    }
     const detail = err.response?.data?.detail;
     if (Array.isArray(detail)) {
-      // Pydantic v2 returns [{msg, loc, type, input}] — convert to string
       const msg = detail.map(d => d.msg || JSON.stringify(d)).join(', ');
       err.response.data.detail = msg;
     }
@@ -37,19 +42,21 @@ export const updateProfile = (data) => api.post('/riders/profile', data);
 export const updateGPS     = (lat, lng) => api.post('/riders/gps', { lat, lng });
 
 // ── Policy ──
-export const getPolicyQuote  = () => api.get('/policy/quote');
-export const createPolicy    = (data) => api.post('/policy/create', data);
-export const getMyPolicies   = () => api.get('/policy/my');
-export const getZones        = () => api.get('/policy/zones');
+export const getPolicyQuote   = () => api.get('/policy/quote');
+export const createPolicy     = (data) => api.post('/policy/create', data);
+export const getMyPolicies    = () => api.get('/policy/my');
+export const getZones         = () => api.get('/policy/zones');
+export const updatePolicyZone = (zone) => api.patch('/policy/active/zone', { zone });
 
 // ── Claims ──
-export const getMyClaims     = () => api.get('/claims/my');
-export const getClaimStats   = () => api.get('/claims/stats');
-export const simulateTrigger = (data) => api.post('/claims/simulate-trigger', data);
+export const getMyClaims     = () => api.get('/api/claims/my');
+export const getClaimStats   = () => api.get('/api/claims/stats');
+export const simulateTrigger = (data) => api.post('/api/claims/simulate-trigger', data);
+export const verifyNoGpsClaim = (id) => api.post(`/api/claims/${id}/verify-no-gps`);
 
 // ── Analytics ──
-export const getInsurerDashboard = () => api.get('/analytics/insurer');
-export const getLiveStats        = () => api.get('/analytics/live');
+export const getInsurerDashboard = () => api.get('/api/analytics/insurer');
+export const getLiveStats        = () => api.get('/api/analytics/live');
 
 // ── Auth ──
 export const sendOTP      = (phone) => api.post('/auth/send-otp', { phone });
@@ -68,6 +75,6 @@ export const clearToken = () => { if (typeof window !== 'undefined') { localStor
 export const isLoggedIn = () => !!getToken();
 
 // ── Weather (direct from backend) ──
-export const getLiveWeather = () => api.get('/analytics/weather');
+export const getLiveWeather = () => api.get('/api/analytics/weather');
 
 export default api;

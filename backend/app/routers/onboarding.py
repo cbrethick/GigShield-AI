@@ -47,7 +47,7 @@ def get_profile(rider: Rider = Depends(get_current_rider)):
     }
 
 @router.post("/profile")
-def update_profile(
+async def update_profile(
     data: ProfileUpdate,
     rider: Rider = Depends(get_current_rider),
     db: Session = Depends(get_db),
@@ -62,10 +62,27 @@ def update_profile(
     rider.avg_daily_earnings = data.avg_daily_earnings
     rider.work_start_hour = data.work_start_hour
     rider.work_end_hour = data.work_end_hour
-    rider.upi_id = data.upi_id
-    rider.bank_account_number = data.bank_account_number
-    rider.bank_ifsc = data.bank_ifsc
-    rider.bank_name = data.bank_name
+    
+    # ── Payout Verification ──
+    if data.upi_id or data.bank_account_number:
+        from app.services.verification_service import verify_payout_details
+        import asyncio
+        
+        is_valid, msg, registered_name = await verify_payout_details(
+            name=data.name or rider.name or "Rider",
+            upi_id=data.upi_id,
+            account_number=data.bank_account_number,
+            ifsc=data.bank_ifsc
+        )
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=msg)
+            
+        rider.upi_id = data.upi_id
+        rider.bank_account_number = data.bank_account_number
+        rider.bank_ifsc = data.bank_ifsc
+        rider.bank_name = data.bank_name
+        rider.verified_name = registered_name
+        
     db.commit()
     db.refresh(rider)
 
@@ -75,7 +92,15 @@ def update_profile(
         avg_daily_hours=rider.avg_daily_hours,
         avg_daily_earnings=rider.avg_daily_earnings,
     )
-    return {"rider": {"id": rider.id, "zone": rider.zone}, "premium_quote": quote}
+    return {
+        "rider": {
+            "id": rider.id, 
+            "zone": rider.zone, 
+            "verified_name": rider.verified_name
+        }, 
+        "premium_quote": quote,
+        "message": f"Profile updated and payment details verified for {rider.verified_name}"
+    }
 
 @router.post("/gps")
 def update_gps(

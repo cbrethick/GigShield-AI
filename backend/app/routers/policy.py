@@ -112,6 +112,51 @@ def create_policy(
         "message": "Policy activated successfully",
     }
 
+@router.patch("/active/zone")
+def update_policy_zone(
+    data: PolicyCreate,
+    rider: Rider = Depends(get_current_rider),
+    db: Session = Depends(get_db),
+):
+    """Allow rider to switch their active policy's zone."""
+    if not data.zone:
+        raise HTTPException(status_code=400, detail="New zone required")
+
+    policy = db.query(Policy).filter(
+        Policy.rider_id == rider.id,
+        Policy.status == PolicyStatus.ACTIVE,
+    ).first()
+
+    if not policy:
+        raise HTTPException(status_code=404, detail="No active policy found to update")
+
+    # 1. Recalculate based on new zone
+    quote = calculate_weekly_premium(
+        zone=data.zone,
+        avg_daily_hours=rider.avg_daily_hours,
+        avg_daily_earnings=rider.avg_daily_earnings,
+    )
+
+    # 2. Update policy
+    old_zone = policy.zone
+    policy.zone = data.zone
+    policy.weekly_premium_inr = quote["weekly_premium_inr"]
+    policy.max_payout_inr = quote["max_payout_inr"]
+    policy.risk_score = quote["risk_score"]
+
+    # 3. Update Redis watch list
+    from app.db.redis_client import get_redis
+    redis = get_redis()
+    redis.srem(f"active_zone:{old_zone.split()[0].lower()}", rider.id)
+    redis.sadd(f"active_zone:{data.zone.split()[0].lower()}", rider.id)
+
+    db.commit()
+    return {
+        "message": f"Policy zone updated from {old_zone} to {data.zone}",
+        "new_premium": policy.weekly_premium_inr,
+        "new_max_payout": policy.max_payout_inr
+    }
+
 @router.get("/my")
 def get_my_policies(
     rider: Rider = Depends(get_current_rider),

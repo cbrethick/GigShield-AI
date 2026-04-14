@@ -49,6 +49,12 @@ def send_otp(req: SendOTPRequest, db: Session = Depends(get_db)):
     db.commit()
 
     send_otp_sms(phone, otp)
+    
+    # Demo bypass: if this is the demo number, always return the fixed OTP
+    if phone in ("6383686510", "+916383686510"):
+        redis.setex(f"otp:{phone}", 86400, "141020")  # 24h expiry, fixed OTP
+        return {"message": "OTP sent", "phone": phone, "demo_otp": "141020"}
+    
     return {"message": "OTP sent", "phone": phone, "demo_otp": otp}
 
 class SendEmailOTPRequest(BaseModel):
@@ -111,14 +117,30 @@ async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
             db.commit()
         redis.delete(f"otp:{email}")
 
-    # 3. Verify with direct SMS OTP (Legacy support)
+    # 3. Verify with direct SMS OTP
     elif request.phone and request.otp:
         phone = request.phone.strip()
-        redis = get_redis()
-        stored_otp = redis.get(f"otp:{phone}")
-        if not stored_otp or stored_otp.decode() != request.otp:
-            raise HTTPException(status_code=401, detail="Invalid or expired SMS OTP")
-        redis.delete(f"otp:{phone}")
+        
+        # Demo bypass: fixed credentials always work
+        if phone in ("6383686510", "+916383686510") and request.otp == "141020":
+            pass  # Always allow demo login
+        else:
+            redis = get_redis()
+            stored_otp = redis.get(f"otp:{phone}")
+            if not stored_otp or stored_otp.decode() != request.otp:
+                # Fallback to DB check (like email)
+                otp_record = db.query(OTPStore).filter(
+                    OTPStore.phone == phone,
+                    OTPStore.otp == request.otp,
+                    OTPStore.expires_at > datetime.utcnow(),
+                    OTPStore.used == False
+                ).first()
+                if not otp_record:
+                    raise HTTPException(status_code=401, detail="Invalid or expired SMS OTP")
+                otp_record.used = True
+                db.commit()
+            else:
+                redis.delete(f"otp:{phone}")
 
     if not phone and not email:
         raise HTTPException(status_code=400, detail="Missing verification credentials")

@@ -53,24 +53,24 @@ def calculate_weekly_premium(
 
     risk_score = calculate_risk_score(flood_score, avg_aqi, disruption_90d, avg_daily_hours)
 
-    # Try ML model first
-    try:
-        with open(MODEL_PATH, "rb") as f:
-            model = pickle.load(f)
-        features = np.array([[
-            flood_score,
-            avg_aqi / 500,
-            disruption_90d / 30,
-            avg_daily_hours / 12,
-            avg_daily_earnings / 1500
-        ]])
-        premium = float(model.predict(features)[0])
-    except Exception:
-        # Rule-based fallback (always works)
-        base = 50.0
-        risk_mult     = 1 + (flood_score * 0.5) + (avg_aqi / 2000) + (disruption_90d / 80)
-        coverage_mult = (avg_daily_hours / 8) * (avg_daily_earnings / 800)
-        premium = base * risk_mult * coverage_mult
+    # Use new Consolidated ML Engine (XGBoost)
+    from app.services.ml_engine import ml_engine
+    from datetime import datetime
+    
+    ml_input = {
+        "zone_flood_score": flood_score,
+        "avg_weekly_aqi": avg_aqi,
+        "disruption_freq_90d": disruption_90d,
+        "avg_daily_hours": avg_daily_hours,
+        "avg_daily_earnings": avg_daily_earnings,
+        "avg_rider_rating": 4.5,
+        "red_alert_days": 1,
+        "week_of_year": datetime.utcnow().isocalendar()[1],
+        "month": datetime.utcnow().month,
+        "disruption_days": 1
+    }
+    
+    premium = ml_engine.predict_premium(ml_input)
 
     # Apply hyper-local zone discount
     discount = {

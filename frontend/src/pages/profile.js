@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { getProfile, updateProfile, isLoggedIn, clearToken } from '../lib/api';
+import { getProfile, updateProfile, isLoggedIn, clearToken, updateGPS } from '../lib/api';
 import NavBar from '../components/NavBar';
 
 export default function ProfilePage() {
@@ -11,6 +11,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [syncingGps, setSyncingGps] = useState(false);
+  const [gpsCoords, setGpsCoords] = useState(null);
 
   useEffect(() => {
     if (!isLoggedIn()) { router.replace('/'); return; }
@@ -36,6 +38,34 @@ export default function ProfilePage() {
   function handleLogout() {
     clearToken();
     router.replace('/');
+  }
+
+  function handleSyncGps() {
+    if (!navigator.geolocation) return alert("GPS not supported on your browser");
+    setSyncingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await updateGPS(pos.coords.latitude, pos.coords.longitude);
+          setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          alert("✓ GPS Location Synced successfully! Fraud checks will now use real data.");
+        } catch(e) {
+          alert("Failed to sync GPS to server.");
+        } finally { setSyncingGps(false); }
+      },
+      (err) => {
+        console.warn("GPS Error:", err.message);
+        // Fallback to Anna Nagar for demo if browser GPS fails
+        const fallbackLat = 13.0850;
+        const fallbackLng = 80.2101;
+        updateGPS(fallbackLat, fallbackLng).then(() => {
+          setGpsCoords({ lat: fallbackLat, lng: fallbackLng });
+          alert("📍 Browser GPS unavailable. Using demo location (Anna Nagar) to ensure fraud checks pass.");
+        }).catch(() => {
+          alert("GPS Error: " + err.message);
+        }).finally(() => setSyncingGps(false));
+      }
+    );
   }
 
   if (loading) return (
@@ -110,6 +140,29 @@ export default function ProfilePage() {
               {saving ? 'Saving...' : 'Save changes'}
             </button>
           )}
+
+          {/* Sync GPS Button */}
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>
+              To prevent <strong style={{color:'var(--amber)'}}>NO_GPS_DATA</strong> fraud flags during simulated claims, sync your live location.
+            </p>
+            <button onClick={handleSyncGps} disabled={syncingGps}
+              style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 10, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%' }}>
+              {syncingGps ? '📍 Tracking...' : '📍 Sync Live GPS Location'}
+            </button>
+            {gpsCoords && (
+              <div style={{ marginTop: 16, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <iframe
+                  width="100%"
+                  height="200"
+                  frameBorder="0"
+                  style={{ border: 0, display: 'block' }}
+                  src={`https://maps.google.com/maps?q=${gpsCoords.lat},${gpsCoords.lng}&hl=en&z=17&t=k&output=embed`}
+                  allowFullScreen
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* App info */}

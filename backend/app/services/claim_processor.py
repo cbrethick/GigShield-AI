@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.models import Policy, Claim, Rider, TriggerEvent, PolicyStatus, ClaimStatus
 from app.services.fraud_detector import check_fraud
 from app.services.payout_service import process_payout, create_fund_account
+from app.services.insurer_service import create_notification
 import uuid
 
 def gen_claim_number() -> str:
@@ -26,17 +27,30 @@ async def process_trigger_event(
     now = datetime.utcnow()
 
     # ── STEP 1: Trigger Confirmed ──
-    # Weather API or system detects event threshold crossed.
-    event = TriggerEvent(
-        id=trigger_event_id,
-        zone=zone,
-        trigger_type=trigger_type,
-        trigger_value=trigger_value,
-        threshold=threshold,
-        platform_status=platform_status,
-        raw_data=json.dumps({"duration_hours": duration_hours, "source": "WeatherAPI"}),
-    )
-    db.add(event)
+    # Check if this exact trigger event already exists to avoid IntegrityError
+    existing_event = db.query(TriggerEvent).filter(TriggerEvent.id == trigger_event_id).first()
+    
+    if not existing_event:
+        event = TriggerEvent(
+            id=trigger_event_id,
+            zone=zone,
+            trigger_type=trigger_type,
+            trigger_value=trigger_value,
+            threshold=threshold,
+            platform_status=platform_status,
+            raw_data=json.dumps({"duration_hours": duration_hours, "source": "WeatherAPI"}),
+        )
+        db.add(event)
+    else:
+        event = existing_event
+        event.trigger_value = trigger_value
+        event.platform_status = platform_status
+    
+    # ── SYSTEM VERIFICATION: Mark trigger as authentic in Redis ──
+    from app.db.redis_client import get_redis
+    redis = get_redis()
+    redis.setex(f"system_verified_trigger:{trigger_event_id}", 86400 * 2, "1")
+    
     db.commit()
 
     # ── STEP 2: Worker Eligibility Check ──
@@ -169,6 +183,11 @@ async def process_trigger_event(
 
     # Final update to event record
     event.claims_created = results["claims_created"]
+    
+    # Create notification for insurer
+    if results["claims_created"] > 0:
+        create_notification(db, f"Alert: {trigger_type} in {zone}. {results['claims_created']} claims pending review.")
+    
     db.commit()
 
     return results

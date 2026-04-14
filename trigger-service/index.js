@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
 const cron = require("node-cron");
 const { checkAllZones } = require("./src/monitors/weatherMonitor");
 const { checkAllZonesAQI } = require("./src/monitors/aqiMonitor");
@@ -8,6 +9,7 @@ const { evaluateAndFire, fireTrigger } = require("./src/triggers/triggerEngine")
 const { checkAllZonesCurfew } = require("./src/monitors/curfewMonitor");
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
@@ -101,6 +103,24 @@ app.post("/trigger/manual", async (req, res) => {
       threshold: threshold ?? 64,
       platformStatus: "PAUSED",
       durationHours: duration_hours ?? 4,
+    });
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Alias for insurer-portal
+app.post("/simulate", async (req, res) => {
+  const { zone, trigger_type } = req.body;
+  try {
+    const result = await fireTrigger({
+      zone: zone || "T. Nagar",
+      triggerType: trigger_type || "HEAVY_RAIN",
+      triggerValue: 78.5,
+      threshold: 64,
+      platformStatus: "PAUSED",
+      durationHours: 4,
     });
     res.json({ success: true, result });
   } catch (err) {

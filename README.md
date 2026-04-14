@@ -1,8 +1,16 @@
 # 🛵 GigShield — AI-Powered Parametric Income Insurance for Food Delivery Partners
 
-> **DEVTrails 2026 | Phase 1 Submission**
+> **DEVTrails 2026 | Phase 1(Seed),2(Scale),3(Soar) **
 > Protecting the livelihoods of Zomato & Swiggy delivery partners against uncontrollable income disruptions.
-> *Updated March 19, 2026 — Adversarial Defense patch in response to Market Crash scenario.*
+> *Updated April 14, 2026 — Full cloud deployment, persisted ML models, advanced fraud detection.*
+
+---
+## 🌐 Live Applications
+
+| Product | URL | Description |
+|---------|-----|-------------|
+| 🛵 **Rider PWA (B2C)** | [gig-shield-ai-two.vercel.app](https://gig-shield-ai-two.vercel.app/) | Delivery partner app — OTP login, coverage dashboard, payout notifications |
+| 🏦 **Insurer Portal (B2B)** | [gigshield-insurer-portal-3ybx.vercel.app](https://gigshield-insurer-portal-3ybx.vercel.app/) | Insurance company dashboard — live alerts, batch approval, fraud analytics |
 
 ---
 
@@ -10,14 +18,15 @@
 
 1. [Problem & Persona](#1-problem--persona)
 2. [Our Solution](#2-our-solution)
-3. [Persona-Based Scenarios & Workflow](#3-persona-based-scenarios--workflow)
-4. [Weekly Premium Model & Parametric Triggers](#4-weekly-premium-model--parametric-triggers)
-5. [Platform Decision](#5-platform-decision)
-6. [AI/ML Integration Plan](#6-aiml-integration-plan)
-7. [**Adversarial Defense & Anti-Spoofing Strategy**](#7-adversarial-defense--anti-spoofing-strategy)
-8. [Tech Stack & Architecture](#8-tech-stack--architecture)
-9. [Development Plan](#9-development-plan)
-10. [Team](#10-team)
+3. [System Architecture](#3-system-architecture)
+4. [Persona-Based Scenarios & Workflow](#3-persona-based-scenarios--workflow)
+5. [Weekly Premium Model & Parametric Triggers](#4-weekly-premium-model--parametric-triggers)
+6. [AI/ML Integration — Persisted Models](#6-aiml-integration--persisted-models)
+7. [Platform Decision](#5-platform-decision)
+8. . [**Adversarial Defense & Anti-Spoofing Strategy**](#7-adversarial-defense--anti-spoofing-strategy)
+9. . [Tech Stack & Architecture](#8-tech-stack--architecture)
+10. [Development Plan](#9-development-plan)
+11. [Team](#10-team)
 
 ---
 
@@ -45,29 +54,58 @@ GigShield is an AI-powered parametric insurance platform that:
 
 ---
 
-## 3. Persona-Based Scenarios & Workflow
+
+## 3. System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        GIGSHIELD PLATFORM                           │
+├──────────────┬──────────────────┬──────────────────┬─────────────── ┤
+│  THE WATCHMAN│   THE ENGINE     │  THE PARTNER     │  THE VAULT     │
+│              │                  │                  │                │
+│  Node.js     │  FastAPI         │  Rider PWA       │  Insurer       │
+│  Trigger     │  Backend         │  Next.js         │  Portal        │ 
+│  Service     │  (Port 8001)     │  (Port 3000)     │  Next.js       │
+│  (Port 3001) │                  │                  │  (Port 3002)   │
+│              │  ┌────────────┐  │                  │                │
+│  • IMD poll  │  │ XGBoost    │  │  • Firebase OTP  │  • Live alerts │
+│  • OWM poll  │  │ Premium    │  │  • Dashboard     │  • Batch appr  │
+│  • AQI check │  │ Model .pkl │  │  • Notif centre  │  • Fraud DNA   │
+│  • Threshold │  ├────────────┤  │  • Payout hist   │  • Prophet     │
+│    breach    │  │ Isolation  │  │  • Offline PWA   │    forecast    │
+│  • Fire event│  │ Forest.pkl │  │                  │  • Heatmap     │
+│              │  └────────────┘  │                  │                │
+├──────────────┴──────────────────┴──────────────────┴───────────────-┤
+│                          DATA LAYER                                 │
+│  PostgreSQL (Ledger)  ·  Redis (Zone Watchlists + B2B Balance)      │
+├─────────────────────────────────────────────────────────────────────┤
+│                        DEPLOYMENT                                   │
+│  Railway (DB+Redis) → Render (Backend+Trigger) → Vercel (Frontends) │
+│  Firebase Auth (OTP)  ·  Razorpay Sandbox (UPI Payouts)             │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 4. Persona-Based Scenarios & Workflow
 
 ### Scenario A — Cyclone / Heavy Rain (Chennai)
 1. IMD issues Red Alert. Rainfall crosses 64mm in T. Nagar zone.
 2. GigShield's Node.js trigger service detects breach via OpenWeatherMap API.
 3. Platform API confirms Zomato has paused orders in the zone.
-4. FastAPI backend queries all 312 active policies in that zone.
-5. For each rider — adversarial defense layer runs (Section 7).
-6. Clean riders: claim auto-approved → ₹400 to UPI in ~10 minutes.
-7. Flagged riders: placed in grace queue with 2-hour window to self-verify.
+4. FastAPI backend queries all active policies in that zone.
+5. **Adversarial defence layer runs** — 6 signals evaluated per rider.
+6. Clean riders (score < 0.25): claim auto-approved → ₹400 to UPI in ~10 minutes.
+7. Amber-tier riders (0.25–0.50): placed in grace queue, 2-hour recovery window.
+8. Red-tier riders (> 0.75): syndicate block, legal team notified.
 
-### Scenario B — Severe AQI (Delhi NCR)
-1. CPCB AQI crosses 400 (Severe) for 3+ consecutive hours.
-2. Trigger fires for all active policies in affected zones.
-3. Multi-signal fraud check runs — AQI-specific behavioral patterns validated.
-4. Payout processed for verified riders.
+### Scenario B — Coordinated Fraud Ring (Telegram Syndicate)
 
-### Scenario C — Coordinated Fraud Ring (Market Crash scenario)
 1. 500 riders in a Telegram group activate GPS-spoofing apps simultaneously.
 2. All 500 spoof their location to T. Nagar during a Red Alert event.
-3. GigShield's adversarial defense detects: sudden mass GPS convergence, device fingerprint clustering, accelerometer stillness, and cell tower mismatch.
-4. All 500 claims auto-routed to SYNDICATE_REVIEW — zero payouts drain the pool.
-5. Insurer dashboard fires real-time fraud ring alert with cluster visualization.
+3. GigShield's DBSCAN detector fires: 500 GPS coordinates converge in under 2 minutes (natural arrival: 20–40 min std deviation).
+4. All 500 claims auto-routed to `SYNDICATE_REVIEW` — zero payouts.
+5. Insurer dashboard shows cluster timeline, device graph, and geographic heatmap.
 
 ### End-to-End Application Workflow
 
@@ -75,42 +113,86 @@ GigShield is an AI-powered parametric insurance platform that:
 
 ---
 
-## 4. Weekly Premium Model & Parametric Triggers
+## 5. Weekly Premium Model & Parametric Triggers
 
 ### Why Weekly?
-Gig workers receive platform payouts weekly. A weekly insurance premium aligns cost with income flow — riders pay from what they just earned.
 
-### Premium Calculation
+Gig workers receive platform payouts weekly. A weekly insurance premium aligns cost with income flow.
+
+### Premium Formula
 
 ```
 Weekly Premium = Base Rate × Risk Multiplier × Coverage Multiplier
 
 Base Rate         = ₹50
-Risk Multiplier   = f(zone_flood_history, avg_weekly_AQI, disruption_frequency_90d)
+Risk Multiplier   = f(zone_flood_score, avg_weekly_aqi, disruption_freq_90d)
 Coverage Mult.    = f(avg_daily_hours, avg_daily_earnings_declared)
 ```
 
 | Rider Profile | Weekly Premium | Max Weekly Payout |
-|---|---|---|
-| Low-risk zone, 6hrs/day | ₹35 | ₹500 |
-| Medium-risk zone, 8hrs/day | ₹55 | ₹800 |
-| High-risk zone, 10hrs/day | ₹80 | ₹1,200 |
+|---------------|----------------|-------------------|
+| Low-risk zone, 6 hrs/day | ₹35 | ₹500 |
+| Medium-risk zone, 8 hrs/day | ₹55 | ₹800 |
+| High-risk zone, 10 hrs/day | ₹80 | ₹1,200 |
 
 ### Parametric Triggers
 
 | Trigger | Threshold | Data Source |
-|---|---|---|
+|---------|-----------|-------------|
 | Heavy Rain | Rainfall > 64mm/hr | IMD / OpenWeatherMap |
 | Flood Alert | IMD Red Alert issued | IMD RSS |
 | Severe AQI | AQI > 400 for 3+ hrs | CPCB API |
-| Platform Suspension | Zone status = PAUSED | Platform API (mocked) |
-| Curfew / Section 144 | Official zone closure | Govt Alert API (mocked) |
+| Platform Suspension | Zone status = PAUSED | Platform API |
+| Curfew / Section 144 | Official zone closure | Govt Alert API |
 
-All triggers require **dual confirmation** — weather threshold AND platform suspension. This alone eliminates false claims from weather events that don't actually affect deliveries.
+All triggers require **dual confirmation** — weather threshold AND platform suspension.
+---
+
+## 6. AI/ML Integration Plan
+
+### 6.1 Dynamic Premium — XGBoost Regressor (Persisted as .pkl)
+
+```
+Input features:  zone_flood_score, avg_weekly_aqi, disruption_freq_90d,
+                 avg_daily_hours, avg_daily_earnings, week_of_year, month
+Output:          weekly_premium_inr (₹35–₹80)
+Performance:     MAE ₹3.2  ·  R² 0.91  ·  CV MAE ₹3.5 ± 0.4
+```
+
+**Training Data Sources:**
+- [Open-Meteo Historical API](https://archive-api.open-meteo.com/v1/archive) — Real Chennai rainfall 2018–2023 (free, no key)
+- [CPCB AQI Repository](https://app.cpcbccr.com/ccr/#/caaqm-dashboard-all/caaqm-landing/aqi-repository) — City-level AQI archive
+- [Kaggle Food Delivery Dataset](https://www.kaggle.com/datasets/gauravmalik26/food-delivery-dataset) — 45,000 delivery records, India
+- [IMD Gridded Rainfall](https://www.imdpune.gov.in/Clim_Pred_LRF_New/Grided_Data_Download.html) — 0.25° daily rainfall data
+
+### 6.2 Fraud Detection — Isolation Forest (Persisted as .pkl)
+
+```
+Input features:  mobility_match, cell_tower_ok, accelerometer_variance,
+                 platform_activity, arrival_timing, device_fingerprint
+Output:          fraud_score (0.0–1.0)
+Contamination:   5%  ·  200 estimators
+```
+
+### 6.3 Predictive Insurer Dashboard — Prophet
+
+Time-series forecasting of next 7 days' expected claims based on weather forecasts. Outputs: expected claim volume, confidence bands, high-risk zones.
+
+### Model Files
+
+```
+backend/models/
+  xgboost_premium_model.pkl     ← Weekly premium predictor
+  isolation_forest_fraud.pkl    ← Fraud anomaly scorer
+  feature_scaler.pkl            ← StandardScaler for fraud model
+  fraud_feature_list.pkl        ← Feature list
+  model_metadata.json           ← Version, metrics, training info
+```
+
 
 ---
 
-## 5. Platform Decision
+## 7. Platform Decision
 
 **Decision: Progressive Web App (PWA) — Web-first, mobile-responsive**
 
@@ -123,213 +205,125 @@ All triggers require **dual confirmation** — weather threshold AND platform su
 
 ---
 
-## 6. AI/ML Integration Plan
+## 8. Adversarial Defense & Anti-Spoofing Strategy
+> *Designed in response to the DEVTrails Market Crash scenario: a 500-member fraud syndicate coordinating via Telegram, using GPS-spoofing apps during a Red Alert weather event.*
 
-### 6.1 Dynamic Premium — XGBoost Regressor
-Input features: zone flood score, avg AQI, disruption frequency (90d), daily hours, declared earnings. Output: weekly premium in ₹. Trained on synthetic IMD historical data with rule-based fallback.
+### The 6 Signals
 
-### 6.2 Fraud Detection — Multi-Layer Engine
-Standard rule-based layer (GPS zone, duplicates, frequency) + Isolation Forest anomaly scoring + adversarial defense (full detail in Section 7).
+| # | Signal | Detection Method | Spoofing Resistance |
+|---|--------|-----------------|-------------------|
+| 1 | Mobility Fingerprint | Cosine similarity < 0.3 vs 30-day history → flag | **HIGH** — history cannot be retroactively faked |
+| 2 | Cell Tower Region | Cell region ≠ claimed GPS zone → CARRIER_MISMATCH | **VERY HIGH** — requires hardware to fake |
+| 3 | Accelerometer Variance | Stillness for 20+ min during trigger → STILLNESS_FLAG | **HIGH** — physical stillness is real |
+| 4 | Platform Activity | Order activity during claimed disruption → anomaly | **HIGH** — cross-system validation |
+| 5 | DBSCAN Temporal Cluster | 20+ GPS arrivals in same zone within 5 min → SYNDICATE_ALERT | **VERY HIGH** — coordination creates the signal |
+| 6 | Device Fingerprint Graph | 3+ flagged riders sharing device fingerprint → LINKED_DEVICE_RING | **MEDIUM** — shared devices leave traces |
 
-### 6.3 Predictive Insurer Dashboard — Prophet
-Time-series forecasting of next week's expected claims based on weather forecasts. Outputs: expected claim volume, estimated payout, high-risk zones.
+### Fraud Tier Routing
 
----
+| Tier | Score Range | Action | Description |
+|------|-------------|--------|-------------|
+| 🟢 Tier 1 | < 0.25 | **AUTO-APPROVE** | UPI payout in 10 minutes |
+| 🟡 Tier 2 | 0.25–0.50 | **GRACE QUEUE** | 2-hour recovery window, rider not notified |
+| 🟠 Tier 3 | 0.50–0.75 | **MANUAL REVIEW** | Human reviewer, 2–4 hour resolution |
+| 🔴 Tier 4 | > 0.75 | **SYNDICATE BLOCK** | Legal team notified, zero payouts |
 
-## 7. Adversarial Defense & Anti-Spoofing Strategy
-
-> *This section was added in direct response to the DEVTrails Market Crash scenario (March 19, 2026): a 500-member fraud syndicate coordinating via Telegram, using GPS-spoofing apps to fake locations during a Red Alert weather event and drain the liquidity pool.*
->
-> *Simple GPS coordinate checking is officially obsolete. GigShield's response is a 6-signal adversarial defense architecture.*
-
----
-
-### The Core Principle
-
-A real stranded delivery partner leaves a **rich, consistent, multi-dimensional digital footprint**. A fraudster running a GPS spoofing app at home does not. Our system detects the difference across six independent signal dimensions — no single signal can block a legitimate claim, but multiple weak signals create an unbeatable combined score.
-
----
-
-### 7.1 The Differentiation — Real Rider vs Bad Actor
-
-#### Signal 1 — Behavioral History / Mobility Fingerprint
-
-Every rider builds a **30-day mobility fingerprint**: the routes they actually travel, the zones they work in, their average speed between GPS pings, and their daily coverage radius. This fingerprint is stored as a probability distribution over Chennai's zones.
-
-A genuine T. Nagar rider has 80%+ of their historical pings in or near T. Nagar. A fraudster from Perambur who has never pinged in T. Nagar suddenly "appears" there the moment a Red Alert is issued. Their mobility fingerprint produces a near-zero similarity score for that location.
-
-**Detection method:** Cosine similarity between claimed location and 30-day mobility fingerprint. Score < 0.3 → MOBILITY_MISMATCH flag.
-
-**Why this beats GPS spoofing:** A spoofing app changes your GPS coordinates. It cannot retroactively change 30 days of real movement history.
+**Loyalty Modifier:** Clean claims history (2+ paid, zero flags) → fraud score reduced by 30 points.
 
 ---
 
-#### Signal 2 — Device Sensor Fusion (Accelerometer + Gyroscope)
-
-A rider physically stranded in a flood zone is anxious, moving, sheltering — their phone is in motion. Vibration from rain, movement while seeking shelter, and the general physical activity of being outside in an emergency all register on the accelerometer.
-
-A fraudster sitting at home with a spoofing app running is **stationary**. Their accelerometer shows near-zero variance for the entire trigger window.
-
-We collect periodic sensor snapshots via the PWA (explicitly consented at onboarding as part of the "active protection" feature). Accelerometer variance below a threshold during the 30 minutes before and after a trigger event is flagged.
-
-**Detection method:** Accelerometer standard deviation during trigger window < 0.15 m/s² for 20+ consecutive minutes → STILLNESS_FLAG.
-
-**Why this beats GPS spoofing:** A GPS spoofer changes their reported location. It does not shake their phone.
-
----
-
-#### Signal 3 — Cell Tower Region vs GPS Mismatch
-
-GPS coordinates can be spoofed with a $5 app. Cell tower connections **cannot be faked without specialized hardware** that no Telegram syndicate will have.
-
-When a rider's phone connects to the mobile network, it associates with physical cell towers. Those towers have known locations. A rider in T. Nagar connects to towers in T. Nagar. A rider at home in Perambur connects to towers in Perambur — regardless of what their GPS coordinates claim.
-
-We capture the network carrier's approximate cell region (accessible via standard browser/mobile network APIs) and cross-reference against the claimed GPS zone.
-
-**Detection method:** Cell tower region ≠ claimed GPS zone → CARRIER_MISMATCH flag. This is our single strongest anti-spoofing signal.
-
-**Why this beats GPS spoofing:** GPS and cell towers are completely independent systems. Spoofing one does not spoof the other.
-
----
-
-#### Signal 4 — Platform Activity Correlation
-
-If a rider is genuinely unable to work due to a disruption, their Zomato/Swiggy app activity should reflect that: they went offline, declined orders, or show zero activity in the trigger window.
-
-A bad actor at home may still have their platform app open and active — potentially even accepting orders — while simultaneously claiming income loss from a disruption in another zone.
-
-We cross-reference platform activity data (mocked in Phase 1, real API integration in Phase 2): was this rider accepting, declining, or ignoring orders in the 2 hours before and during the trigger?
-
-**Detection method:** Rider shows platform activity (order pings received + responded to) during claimed disruption window → ACTIVITY_ANOMALY flag.
-
----
-
-#### Signal 5 — Coordinated Timing Cluster Detection (Syndicate Signal)
-
-This is our most powerful defense against the **Telegram syndicate scenario** specifically. Individual spoofing is hard to detect. But 500 people doing it simultaneously creates a statistically impossible pattern.
-
-In genuine disruptions, riders' GPS pings "arrive" in the affected zone organically over 30–90 minutes as the event unfolds — some riders were already there, some moved there before the alert, some sheltered nearby. The distribution of arrival timestamps is broad and natural.
-
-A coordinated syndicate acts on a Telegram signal. They all activate their spoofing apps within minutes of each other, right after the Red Alert is issued. This produces a sharp spike: hundreds of GPS coordinates all converging on the same zone within a **2–5 minute window**.
-
-We run a **DBSCAN temporal clustering algorithm** on GPS arrival timestamps during every trigger event. Natural arrival distributions have a standard deviation of 20–40 minutes. A coordinated attack has a standard deviation of 2–3 minutes.
-
-**Detection method:** DBSCAN identifies a temporal cluster of 20+ GPS arrivals in the same zone within a 5-minute window → SYNDICATE_ALERT fired. All claims in the cluster auto-routed to SYNDICATE_REVIEW queue. Zero payouts until human review completes.
-
-**Why this beats Telegram coordination:** The syndicate's organizational efficiency — everyone acting at the same time — is exactly what makes them detectable. The more coordinated they are, the sharper the cluster, the more obvious the fraud.
-
----
-
-#### Signal 6 — Cross-Rider Device Fingerprint Graph
-
-Fraud syndicates share resources: the same spoofing app tutorial, the same device, or accounts created on the same device. This leaves a trace. Multiple rider accounts linked to the same device fingerprint, similar app installation patterns, or identical browser/device signatures.
-
-We maintain a **device fingerprint graph** across all rider accounts (fingerprint collected at onboarding via browser APIs). During a fraud event, we check whether flagged riders are nodes in the same connected component of this graph.
-
-**Detection method:** 3+ flagged riders from the same trigger event sharing a device fingerprint cluster → LINKED_DEVICE_RING flag added to all their claims.
-
----
-
-### 7.2 The Data — Complete Signal Table
-
-| Signal | Data Points Collected | Collection Method | Spoofing Resistance |
-|---|---|---|---|
-| Mobility fingerprint | 30-day GPS ping history, zone distribution | App heartbeat every 5 min | High — history cannot be retroactively faked |
-| Accelerometer variance | Motion sensor readings during trigger window | PWA sensor API (consented) | High — physical stillness is real |
-| Cell tower region | Network carrier cell ID / region | Browser network API | Very High — requires hardware to fake |
-| Platform activity | Order accept/decline/online status | Platform API (mocked Phase 1) | High — cross-system validation |
-| GPS arrival timing | Timestamp of first ping in trigger zone | Trigger event log + DBSCAN | Very High — coordination creates the signal |
-| Device fingerprint | Browser fingerprint + device ID hash | Collected at onboarding | Medium — shared devices leave traces |
-| Claim history | Prior claims, fraud flags, clean record | PostgreSQL | High — loyalty is hard to fake |
-| IP address region | Approximate IP geolocation | Request metadata | Low (VPN-bypassable) — used as soft signal only |
-
-**Important:** IP geolocation is listed as a *low-resistance* signal — VPNs bypass it trivially. We use it only as a soft signal, never as a blocking condition. Our strong signals (cell tower, DBSCAN, accelerometer) are not VPN-bypassable.
-
----
-
-### 7.3 The UX Balance — Protecting Honest Riders
-
-**This is the most critical design constraint: our fraud system must never punish a genuine rider who is already suffering from a disruption.**
-
-The scenario we must protect against: a real rider in T. Nagar during a flood, whose GPS drops due to network congestion (extremely common in heavy rain), who has no cell signal, and whose phone is low on battery and not moving much because they're sheltering. This rider triggers 2–3 of our signals. They are exactly who GigShield was built for.
-
-Our response: **a tiered grace system that treats every flagged claim as "innocent until proven guilty."**
-
-#### Tier 1 — Auto-Approve (Green)
-Fraud score < 0.25. All major signals clean. Payout within 10 minutes. No rider interaction needed.
-
-#### Tier 2 — Grace Queue (Amber)
-Fraud score 0.25–0.50. 1–2 weak signals flagged (e.g. GPS gap from network drop, slightly anomalous mobility score).
-
-The rider is **never told they are suspected of fraud.** They receive: *"Your claim is being processed. We'll confirm your payout shortly."*
-
-The system waits up to **2 hours** for signals to recover. When the rider's GPS re-locks (it will, once weather allows), the carrier match and mobility score are re-evaluated. If they resolve → auto-approved, payout released. If not → escalated to Tier 3.
-
-This 2-hour window covers the vast majority of genuine network-drop cases, because real riders' signals recover naturally as conditions improve.
-
-#### Tier 3 — Manual Review (Orange)
-Fraud score 0.50–0.75. 2–3 signals flagged including at least one strong signal.
-
-Rider receives: *"We need one more check before your payout — usually takes 2–4 hours."*
-
-A human reviewer on the insurer dashboard examines the case. The rider is **not asked for documents or photos** — too burdensome during an active disruption. The reviewer can approve, deny, or request a simple in-app location confirmation tap.
-
-#### Tier 4 — Syndicate Block (Red)
-Fraud score > 0.75 OR SYNDICATE_ALERT triggered (DBSCAN cluster + device graph). All claims in the cluster are blocked. Insurer dashboard shows the cluster timeline, device graph, and geographic heatmap. Legal/fraud team notified. No individual rider notification until investigation completes — notifying them tips off the syndicate.
-
-#### The Loyalty Modifier
-For Tier 2 and Tier 3 cases: if a rider has a **clean claims history** (2+ previous paid claims, zero fraud flags), their fraud score is automatically reduced by 30 points. Long-term platform loyalty is a strong genuine signal that no short-term fraudster can fake.
-
----
-
-### 7.4 Defense Architecture Summary
-
-![Defense Architecture](images/gigshield_platform_flow.svg)
----
-
-## 8. Tech Stack & Architecture
+## 9. Tech Stack & Architecture
 
 | Layer | Technology | Purpose |
-|---|---|---|
-| Frontend | Next.js PWA | Rider app + insurer dashboard |
-| Core API | Python FastAPI | Auth, onboarding, policy, claims, analytics |
-| Trigger service | Node.js + Express | Live API polling + trigger engine |
-| ML models | XGBoost + DBSCAN + Isolation Forest | Premium + syndicate + anomaly detection |
-| Database | PostgreSQL + Redis | Persistent data + real-time event queue |
-| Payouts | Razorpay Sandbox | Simulated UPI payouts |
-| Hosting | Vercel + Railway | Frontend + backend/triggers |
+|-------|-----------|---------|
+| Frontend (Rider) | Next.js 14 PWA | Rider app — OTP login, dashboard, notifications |
+| Frontend (Insurer) | Next.js 14 | B2B insurer dashboard — live alerts, batch approval |
+| Core API | Python FastAPI | Auth, onboarding, policy, claims, ML inference |
+| Trigger Service | Node.js + Express | Live API polling + parametric trigger engine |
+| ML Models | XGBoost + Isolation Forest | Premium prediction + fraud scoring |
+| Forecasting | Prophet | 7-day insurer claim forecast |
+| Database | PostgreSQL | Persistent ledger — riders, policies, claims, events |
+| Cache / Queue | Redis | B2B balance (atomic), zone watchlists, GPS trails |
+| Auth | Firebase | OTP phone login + Google sign-in |
+| Payouts | Razorpay Sandbox | Simulated UPI disbursement |
+| Hosting | Vercel + Render + Railway | Frontends + API + Database |
+
 
 ---
 
-## 9. Development Plan
+## 10. Cloud Deployment Guide
+
+### Infrastructure Map
+
+```
+Railway.app              Render.com               Vercel.com
+──────────────           ──────────────────       ──────────────────────
+PostgreSQL          →    FastAPI Backend      →   Rider App (B2C)
+Redis               →    Node.js Triggers     →   Insurer Portal (B2B)
+```
+
+### Environment Variables
+
+| Variable | Service | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | Render Backend + Trigger | Railway PostgreSQL public URL |
+| `REDIS_URL` | Render Backend | Railway Redis public URL |
+| `NEXT_PUBLIC_API_URL` | Vercel (both frontends) | `https://your-backend.onrender.com` |
+| `FRONTEND_URL` | Render Backend | Vercel Rider App URL (CORS) |
+| `INSURER_URL` | Render Backend | Vercel Insurer Portal URL (CORS) |
+| `BACKEND_URL` | Render Trigger | Render Backend URL |
+
+### Quick Deploy Steps
+
+1. **Railway** → New Project → Add PostgreSQL → Add Redis → copy `DATABASE_PUBLIC_URL` and `REDIS_PUBLIC_URL`
+2. **Render** → New Web Service → `cbrethick/GigShield-AI`, Root: `gigshield/backend` → add env vars
+3. **Render** → New Web Service → `cbrethick/GigShield-AI`, Root: `gigshield/trigger-service` → add `BACKEND_URL`
+4. **Vercel** → Import `cbrethick/GigShield-AI`, Root: `gigshield/frontend` → add `NEXT_PUBLIC_API_URL`
+5. **Vercel** → Import `cbrethick/gigshield-insurer-portal`, Root: `.` → add `NEXT_PUBLIC_API_URL`
+6. Update `FRONTEND_URL` and `INSURER_URL` in Render Backend with the Vercel URLs from steps 4–5.
+
+### Demo Reset
+
+```bash
+POST /api/v1/insurer/reset
+```
+Clears all history, resets Redis B2B balance to ₹1,00,000. Use before every demo run.
+
+---
+
+## 11. Development Plan
 
 ### Phase 1 (Mar 4–20) — Ideation & Foundation ✅
-- [x] Persona, scenarios, and workflow defined
-- [x] Parametric triggers and thresholds defined
-- [x] Weekly premium model designed
-- [x] Tech stack and full architecture finalized
-- [x] **Adversarial defense strategy designed (Section 7)**
-- [x] GitHub repo with README
-- [x] 2-minute strategy video
 
-### Phase 2 (Mar 21–Apr 4) — Automation & Protection
-- [ ] OTP login + rider onboarding flow
-- [ ] XGBoost premium model trained on synthetic IMD data
-- [ ] 5 live parametric trigger monitors
-- [ ] End-to-end claim flow with adversarial defense engine
-- [ ] Razorpay sandbox payout integration
-- [ ] Basic DBSCAN syndicate detector
+- Persona, scenarios, and workflow defined
+- Parametric triggers and thresholds designed
+- Weekly premium model and actuarial formula
+- Tech stack and full architecture finalised
+- Adversarial defence strategy designed
+- GitHub repo + strategy video
 
-### Phase 3 (Apr 5–17) — Scale & Optimise
-- [ ] Full DBSCAN syndicate detection on live events
-- [ ] Device fingerprint graph (real-time)
-- [ ] Predictive insurer dashboard (Prophet forecasting)
-- [ ] Full 5-minute demo with simulated fraud syndicate attack
-- [ ] Final pitch deck
+### Phase 2 (Mar 21–Apr 4) — Automation & Protection ✅
+
+- OTP login + rider onboarding flow (Firebase)
+- XGBoost premium model trained on synthetic IMD data
+- 5 live parametric trigger monitors
+- End-to-end claim flow with adversarial defence engine
+- Razorpay sandbox payout integration
+- Basic DBSCAN syndicate detector
+
+### Phase 3 (Apr 5–17) — Scale & Optimise ✅
+
+- Full DBSCAN syndicate detection on live events
+- Device fingerprint graph (real-time)
+- **Persisted ML models** (.pkl) — XGBoost + Isolation Forest (fixes Phase 2 review gap)
+- Predictive insurer dashboard (Prophet 7-day forecasting)
+- **Full cloud deployment** (Railway + Render + Vercel)
+- Universal demo reset endpoint
+- 5-minute demo video + Phase 3 pitch deck
 
 ---
 
-## 10. Team
+## 12. Team
 
 | Member | Role |
 |---|---|
@@ -341,10 +335,15 @@ For Tier 2 and Tier 3 cases: if a rider has a **clean claims history** (2+ previ
 
 ## Links
 
-- **Demo Video (Phase 1):** *[https://drive.google.com/file/d/1otSFYJbscJ2AQvKicCFPgvFkGe-ge0WJ/view?usp=sharing]*
-- **Demo Video (Phase 2):** *[https://drive.google.com/file/d/1uYF4OhWYmSEnGOE84zt1C5qHyMMue51q/view?usp=sharing]*
-- *Working Check - [testing.txt]*
-- **Working Flow of GigShield (A-to-Z User Journey):** *[https://docs.google.com/document/d/1iY1RXoYvIFcCpAB63u5oArhq6brKYp3RFs-VskJQknA/edit?usp=sharing]*
-- **GigShield Production Deployment Stack (A-to-Z System Architecture):** *[https://docs.google.com/document/d/191XSIEZxsFC9Ba6hIAjQSrxvocN8sHzs24kSHVCKqQs/edit?usp=sharing]*
+| Resource | Link |
+|----------|------|
+| 🛵 Rider App (Live) | https://gig-shield-ai-two.vercel.app/ |
+| 🏦 Insurer Portal (Live) | https://gigshield-insurer-portal-3ybx.vercel.app/ |
+| 📦 GitHub — Rider App | https://github.com/cbrethick/GigShield-AI |
+| 📦 GitHub — Insurer Portal | https://github.com/cbrethick/gigshield-insurer-portal |
+| 🎬 Demo Video (Phase 1) | https://drive.google.com/file/d/1otSFYJbscJ2AQvKicCFPgvFkGe-ge0WJ/view?usp=sharing |
+| 🎬 Demo Video (Phase 2) | https://drive.google.com/file/d/1uYF4OhWYmSEnGOE84zt1C5qHyMMue51q/view?usp=sharing |
+| 📄 Working Flow (A–Z User Journey) | https://docs.google.com/document/d/1iY1RXoYvIFcCpAB63u5oArhq6brKYp3RFs-VskJQknA/edit?usp=sharing |
+| 📄 Production Architecture (A–Z) | https://docs.google.com/document/d/191XSIEZxsFC9Ba6hIAjQSrxvocN8sHzs24kSHVCKqQs/edit?usp=sharing |
 
 > *"When the rain stops the deliveries, GigShield starts the payouts. And when the syndicates try to drain the pool — GigShield catches them first."*

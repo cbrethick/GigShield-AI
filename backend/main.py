@@ -24,14 +24,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Deployment Security: Permissive CORS for Bearer Tokens
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Universal CORS Middleware (Forced Injection)
+@app.middleware("http")
+async def add_cors_header(request, call_next):
+    if request.method == "OPTIONS":
+        from fastapi.responses import Response
+        response = Response()
+    else:
+        response = await call_next(request)
+    
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "false"
+    return response
 
 app.include_router(auth.router,        prefix="/auth",      tags=["Auth"])
 app.include_router(onboarding.router,  prefix="/riders",    tags=["Riders"])
